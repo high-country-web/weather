@@ -1,3 +1,17 @@
+# Boone IntelliSTAR
+
+This fork automatically displays Boone, North Carolina weather and refreshes weather at each slide cycle without reloading the page.
+
+Requires Node.js 22 or newer. Run `npm install`, fill in the private `.env` file (or copy `example.env` to `.env`), then run `npm start` and open http://localhost:8080.
+
+`WEATHER_API_KEY` is private and used only by Express. The old embedded credential has been removed; obtain your own key and rotate any previously exposed credential. Never add `.env` to Git. `example.env` contains placeholders only.
+
+`MAPBOX_PUBLIC_TOKEN` accepts only a public `pk.*` browser token. It is intentionally returned to the browser; restrict it to your application's URLs in Mapbox. Without it, radar slides are omitted. Private Mapbox tokens are never returned. Weather and radar data requests pass through Express, which allows specific upstream paths, fixes weather coordinates to Boone, times out failed requests, and returns generic errors.
+
+Open the app through Express; static-only development servers cannot provide the private weather proxy. The startup screen explains missing configuration. Weather failures use the existing unavailable-data displays and the next cycle retries. Browser autoplay rules may require a user interaction for sound.
+
+## Original project documentation
+
 # IntelliStar Simulator 
 
 **IntelliStar Simulator** is a simulated recreation of "Local On The 8s" by The Weather Channel in HTML/CSS/JS, as seen from 2007 to 2008, by ***mist weather media***
@@ -28,13 +42,7 @@ Are you a developer? Pull requests are welcome! If you find a bug and fix it you
 
 # Initial Setup
 
-1. Install [node.js LTS](https://nodejs.org/en/).
-2. Acquire a *mapbox.com* API key. This is required for the radar to operate.
-3. Go to `/webroot/js` and open `config.js`.
-5. Line 2 is where your *mapbox.com*  API key goes. Replace `"YOUR_API_KEY"` with your *mapbox.com* API key.
-6. Save your changes to `config.js` and close out of it.
-7. Run `install.bat` *(`install.sh` on macOS)*. This will install all dependencies required to run.
-8. Run `start.bat` *(`start.sh` on macOS)*. This will start a local web server, which is required to run the sim.
+Use the Boone setup instructions at the top of this document. Credentials belong in the private `.env`, and `npm start` runs the required Express server.
 
 ------------
 

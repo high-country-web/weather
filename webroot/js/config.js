@@ -1,6 +1,4 @@
-var api_key = '71f92ea9dd2f4790b92ea9dd2f779061';
-var map_key = 'YOUR_MAP_KEY';
-var traf_key = 'YOUR_TRAFFIC_KEY';
+var map_key = "";
 
 var appearanceSettings = {
     marqueeAd: ["network"],
@@ -142,3 +140,8 @@ var locationSettings = {/*This is what you can edit, anything under the lcationS
         ],
     }
 }
+
+// This installation has a fixed location and a Boone-only slide lineup.
+slideSettings.auto = false;
+slideSettings.order = slideSettings.order.filter(s => !['mapCurrent', 'mapForecast'].includes(s.function));
+appearanceSettings.marqueeAd = ['Boone, North Carolina'];

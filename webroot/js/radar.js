@@ -318,7 +318,7 @@ async function fetchRadarTimestamps(map, frameCount) {
   var mapType = map === radarsat ? "satrad" : "twcRadarMosaic";
   try {
     const response = await fetch(
-      `https://api.weather.com/v3/TileServer/series/productSet/PPAcore?filter=${mapType}&apiKey=${api_key}`
+      `/api/weather/v3/TileServer/series/productSet/PPAcore?filter=${mapType}`
     );
     const data = await response.json();
 
@@ -348,7 +348,7 @@ async function addRadarLayers(map, timestamps) {
       map.addSource(sourceId, {
         type: "raster",
         tiles: [
-          `https://api.weather.com/v3/TileServer/tile/${mapType}?ts=${timestamp}&xyz={x}:{y}:{z}&apiKey=${api_key}`,
+          `/api/weather/v3/TileServer/tile/${mapType}?ts=${timestamp}&xyz={x}:{y}:{z}`,
         ],
         tileSize: 512,
         minzoom: 5,

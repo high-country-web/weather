@@ -33,13 +33,17 @@ var idx = 0, nidx = 1;
 
 function slideKickOff() {
     idx = 0;
-    nidx = 1;
+    nidx = 1 % slideFlavor.order.length;
     showSlides();
 }//end of slideKickOff() function
 
-function slideCallBack() {
+async function slideCallBack() {
     idx++;
-    nidx++;
+    if (idx >= slideFlavor.order.length) {
+        await grabData();
+        idx = 0;
+    }
+    nidx = (idx + 1) % slideFlavor.order.length;
     showSlides();
 };
 var slidePrograms = {
@@ -231,6 +235,7 @@ var slidePrograms = {
         var aqDiv = { 1: "low", 2: "moderate", 3: "unhealthy", 4: "high", 5: "extreme" }[weatherInfo.airQuality.categoryIndex];
         var day = { 0: "Sunday", 1: "Monday", 2: "Tuesday", 3: "Wednesday", 4: "Thursday", 5: "Friday", 6: "Saturday" }[new Date().getDay()]
         $('.air-quality .day').text(day + ":");
+        $('.primpollut .pollutants').empty();
         for (var i = 0; i < weatherInfo.airQuality.pollutants.length; i++) {
             $('.primpollut .pollutants').append(`<span>${weatherInfo.airQuality.pollutants[i]}</span>`);
         }
@@ -253,11 +258,11 @@ var slidePrograms = {
         $('.almanac .box').fadeIn(167, 'linear');
         $('.almanac .header').fadeIn(333, 'linear');
         $('.almanac .day.i .almheader').text(weatherInfo.almanac.days[0].day);
-        $('.almanac .day.i .sunrise').append(weatherInfo.almanac.days[0].sunrise.replace("am", "<span>am</span>").replace("pm", "<span>pm</span>"));
-        $('.almanac .day.i .sunset').append(weatherInfo.almanac.days[0].sunset.replace("am", "<span>am</span>").replace("pm", "<span>pm</span>"));
+        $('.almanac .day.i .sunrise').html(weatherInfo.almanac.days[0].sunrise.replace("am", "<span>am</span>").replace("pm", "<span>pm</span>"));
+        $('.almanac .day.i .sunset').html(weatherInfo.almanac.days[0].sunset.replace("am", "<span>am</span>").replace("pm", "<span>pm</span>"));
         $('.almanac .day.ii .almheader').text(weatherInfo.almanac.days[1].day);
-        $('.almanac .day.ii .sunrise').append(weatherInfo.almanac.days[1].sunrise.replace("am", "<span>am</span>").replace("pm", "<span>pm</span>"));
-        $('.almanac .day.ii .sunset').append(weatherInfo.almanac.days[1].sunset.replace("am", "<span>am</span>").replace("pm", "<span>pm</span>"));
+        $('.almanac .day.ii .sunrise').html(weatherInfo.almanac.days[1].sunrise.replace("am", "<span>am</span>").replace("pm", "<span>pm</span>"));
+        $('.almanac .day.ii .sunset').html(weatherInfo.almanac.days[1].sunset.replace("am", "<span>am</span>").replace("pm", "<span>pm</span>"));
         $('.almanac .stationname').text(weatherInfo.almanac.stationname);
         $('.almanac .almdate').text(new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' }).toUpperCase());
         $('.almanac .yesterday .high').text(weatherInfo.almanac.yesterday.high);
@@ -518,18 +523,6 @@ var slidePrograms = {
 function showSlides() {
     slideLength = slideFlavor.order[idx].slideDelay;
 
-    if (nidx >= slideFlavor.order.length) {
-        nidx = 0;
-        slideCallBack = function () {
-            $("#main").fadeOut(0);
-            audioPlayer.stopPlaying();
-            audioPlayer = null;
-            //URL.revokeObjectURL(songURL);
-            setTimeout(() => {
-                window.location.reload();
-            }, 3000);
-        }
-    }
     currentProgram = slidePrograms[slideFlavor.order[idx].function]
     currentDiv = slideDivs[slideFlavor.order[idx].function]
     nextProgram = slidePrograms[slideFlavor.order[nidx].function]

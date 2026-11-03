@@ -2,9 +2,6 @@
   "name": "intellistar-1",
   "description": "Intellistar 1 Domestic HTML",
   "scripts": {
-    "cors": "node ./webroot/js/cors.js",
-    "http-server": "http-server ./webroot",
-    "dev-server": "live-server ./webroot",
     "start": "node app.js"
   },
   "dependencies": {
@@ -22,5 +19,8 @@
     "gulp-clean-css": "^4.2.0",
     "gulp-sass": "^5.0.0",
     "gulp-sourcemaps": "^2.6.5"
+  },
+  "engines": {
+    "node": ">=22.0.0"
   }
 }

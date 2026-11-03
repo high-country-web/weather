@@ -1,118 +1,4 @@
 var inSettings = true;
-document.addEventListener('DOMContentLoaded', async () =>{
-    $("#settings-menu .version").text(`v${appearanceSettings.version}`);
-    $("#settings-menu .flavortext").text("Flavor: " + slideSettings.flavor + "s");
-    $("#settings-menu .versionstext").text("Version: " + appearanceSettings.graphicsPackage);
-    if(appearanceSettings.graphicsPackage == 2010 || appearanceSettings.graphicsPackage == "2010"){
-        appearanceSettings.iconSet = "2010";
-    }
-    versionsChanger(appearanceSettings.graphicsPackage);
-    await preloadFonts();
-    await preloadImages();
-    $.getJSON("https://mistwx.com/crawlnetwork.json", function(data){
-        if(appearanceSettings.marqueeAd[0] == "network"){
-            appearanceSettings.marqueeAd = data.crawls.intellistar;
-        }
-        if(Number(appearanceSettings.version) < Number(data.simVersions.intellistar)){
-            alert("New update available. Download latest version at\nhttps://github.com/MistWeatherMedia/intellistar-1")
-        }
-    })
-
-    document.getElementById("uploadsongbutton").addEventListener("click", () =>{
-        document.getElementById("songuploadinput").click();
-        document.getElementById("songinput").value = "C";
-    })
-
-    document.getElementById("songuploadinput")
-        .addEventListener('change', (event) => {
-            if(event.target.files[0]){
-                document.getElementById("songinput").value = "C";
-                var file = event.target.files[0];
-                audioSettings.order = [file.name];
-                var url = URL.createObjectURL(file);
-                audioPlayer.playlist = [url];
-            } else {
-                audioSettings.order = [
-                    "Track 1",
-                    "Track 2",
-                    "Track 3",
-                    "Track 4",
-                    "Track 5",
-                    "Track 6",
-                    "Track 7",
-                    "Track 8",
-                    "Track 9",
-                    "Track 10",
-                    "Track 11",
-                    "Track 12",
-                ]
-                audioPlayer.buildPlaylist();
-            }
-        })
-    document.getElementById("songoffsetinput")
-        .addEventListener("change", (event) =>{
-            audioSettings.offset = event.target.value >= 0 ? parseInt(event.target.value) : 0;
-        })
-
-    document.getElementById("songinput")
-        .addEventListener('change', (event) => {
-            if (event.target.value == "C") {
-                document.getElementById("songuploadinput").click();
-                return;
-            }
-            if (event.target.value == "N") {
-                audioSettings.order = [
-                    "Track 1",
-                    "Track 2",
-                    "Track 3",
-                    "Track 4",
-                    "Track 5",
-                    "Track 6",
-                    "Track 7",
-                    "Track 8",
-                    "Track 9",
-                    "Track 10",
-                    "Track 11",
-                    "Track 12",
-                ]
-            } else {
-                audioSettings.order = [`Track ${parseInt(event.target.value)}`];
-            }
-            console.log(`Track ${parseInt(event.target.value)}`);
-            audioPlayer.buildPlaylist();
-            console.log(audioPlayer.playlist);
-            //console.log($('#songinput').val('selectedvalue'));
-        })
-
-    document.getElementById("enablevlcb")
-        .addEventListener('input', (event) =>{
-            if(event.target.value == "on"){
-                audioSettings.vocallocal = true;
-            } else {
-                audioSettings.vocallocal = false;
-            }
-        })
-
-    document.getElementById("locsearchlookup")
-        .addEventListener("keyup", (k) =>{
-            if(k.key == "Enter"){
-                locationSearch('locsearchlookup')
-            }
-        })
-    document.getElementById("advlocsearchlookup")
-        .addEventListener("keyup", (k) =>{
-            if(k.key == "Enter"){
-                locationSearch('advlocsearchlookup')
-            }
-        })
-
-    document.getElementById("map-interactive")
-        .addEventListener("click", () => {
-            mapSettings();
-        })
-
-})
-
 /**
  * Changes between two slides (settings only)
  * 
@@ -726,7 +612,7 @@ async function removeMapCity(){
     await grabMapCityData();
 }
 async function searchMapCity(){
-    $.getJSON("https://api.weather.com/v3/location/search?query=" + document.getElementById("searchcityvalue").value + "&language=en-US&format=json&apiKey=" + api_key, function(data){
+    $.getJSON("/api/weather/v3/location/search?query=" + document.getElementById("searchcityvalue").value + "&language=en-US&format=json", function(data){
         console.log(data);
         locationConfig.regionalMap.map[currentMapIdx].name = data.location.displayName[0];
         locationConfig.regionalMap.map[currentMapIdx].lat = data.location.latitude[0];
