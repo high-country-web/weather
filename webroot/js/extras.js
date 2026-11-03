@@ -1624,13 +1624,18 @@ var slideFlavors = {
 }
 
 async function preloadFonts(){
-    await document.fonts.load("16px 'Interstate'");
-    await document.fonts.load("16px 'Interstate Bold'");
-    await document.fonts.load("16px 'Interstate Bold Italic'");
-    await document.fonts.load("16px 'Interstate Black'");
-    await document.fonts.load("16px 'Interstate Black Cn'");
-    await document.fonts.load("16px 'Interstate Bold Cn'");
-    await document.fonts.load("16px 'Helvetica Black'");
-    await document.fonts.load("16px 'Helvetica Neue'");
-    await document.fonts.load("16px 'Helvetica Cn Bold'");
+    const families = ['Interstate', 'Interstate Bold', 'Interstate Bold Italic',
+        'Interstate Black', 'Interstate Black Cn', 'Interstate Bold Cn',
+        'Helvetica Black', 'Helvetica Neue', 'Helvetica Cn Bold'];
+    console.info('[Boone assets] Loading fonts');
+    const results = await Promise.allSettled(families.map(async family => {
+        await document.fonts.load(`16px '${family}'`);
+        console.info(`[Boone assets] Font ready: ${family}`);
+    }));
+    results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+            console.warn(`[Boone assets] Font unavailable: ${families[index]}; continuing with fallback fonts`);
+        }
+    });
+    console.info(`[Boone assets] Fonts complete: ${results.filter(r => r.status === 'fulfilled').length}/${families.length}`);
 }

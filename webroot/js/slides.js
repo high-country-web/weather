@@ -40,6 +40,7 @@ function slideKickOff() {
 async function slideCallBack() {
     idx++;
     if (idx >= slideFlavor.order.length) {
+        console.info('[Boone slides] Cycle complete; refreshing weather');
         await grabData();
         idx = 0;
     }
@@ -521,6 +522,7 @@ var slidePrograms = {
     }
 } //end of slidePrograms
 function showSlides() {
+    console.info(`[Boone slides] Showing ${idx + 1}/${slideFlavor.order.length}: ${slideFlavor.order[idx].function}`);
     slideLength = slideFlavor.order[idx].slideDelay;
 
     currentProgram = slidePrograms[slideFlavor.order[idx].function]

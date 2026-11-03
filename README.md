@@ -49,3 +49,7 @@ Use the Boone setup instructions at the top of this document. Credentials belong
 You're all set. Enjoy!
 
 Many thanks for using our simulator! We hope you like it.
+
+## Browser console diagnostics
+
+Open the browser console to follow `[Boone startup]`, `[Boone assets]`, `[Boone weather]`, and `[Boone slides]` messages. Font and image failures are warnings; startup continues using available assets and fallback fonts. Weather request logs include the endpoint path, HTTP status, and duration, without query strings, credentials, or response bodies.

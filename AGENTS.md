@@ -8,3 +8,5 @@
 - Keep private API keys on the Express server and route browser weather requests through it. Handle Mapbox’s public browser token separately.
 - Never commit secrets or return private keys to the browser.
 - Preserve unrelated existing changes.
+- Log startup stages, asset loading outcomes, weather request status/timing, and slide cycles in the browser console without printing credentials or token-bearing URLs.
+- Treat failed optional fonts and images as warnings so they cannot block automatic startup.

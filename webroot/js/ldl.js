@@ -178,8 +178,25 @@ function endAlertCrawl(){
 }
 
 async function preloadImages(){
-    await $('.ldl-blue').fadeIn(0, function(){$('.ldl-blue').fadeOut(0)});
-    await $('.ldl-black .template').fadeIn(0, function(){$('.ldl-black .template').fadeOut(0)});
+    const urls = [...new Set(Array.from(document.querySelectorAll('link[rel="preload"][as="image"]'), link => link.getAttribute('href')))];
+    console.info(`[Boone assets] Loading ${urls.length} startup images`);
+    const results = await Promise.all(urls.map(url => new Promise(resolve => {
+        const image = new Image();
+        const timer = setTimeout(() => finish(false), 15000);
+        let finished = false;
+        function finish(ok) {
+            if (finished) return;
+            finished = true;
+            clearTimeout(timer);
+            image.onload = image.onerror = null;
+            console[ok ? 'info' : 'warn'](`[Boone assets] Image ${ok ? 'ready' : 'unavailable'}: ${url}`);
+            resolve(ok);
+        }
+        image.onload = () => finish(true);
+        image.onerror = () => finish(false);
+        image.src = url;
+    })));
+    console.info(`[Boone assets] Images complete: ${results.filter(Boolean).length}/${urls.length}`);
 }
 
 function blueLDL(){

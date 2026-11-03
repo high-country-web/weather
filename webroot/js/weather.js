@@ -82,6 +82,7 @@ async function grabData() {
     weatherInfo.specialModes.bulletin = false;
     weatherInfo.specialModes.precip = false;
     var now = Date.now();
+    console.info('[Boone weather] Refresh starting');
     weatherInfo.dayDesc.noReport = false;
     weatherInfo.weekAhead.noReport = false;
     weatherInfo.almanac.noReport = false;
@@ -90,8 +91,7 @@ async function grabData() {
     await Promise.all([grabCC(), grabLocalForecast(), grabMonthlyPrecip(),
         grabAirQuality(), grabAlmanac(), grabDaypartForecast(),
         grabOutdoorActivityData(), grabAlerts()]);
-    console.log(`Weather grab done in ${Date.now() - now}ms`);
-    console.log(weatherInfo);
+    console.info(`[Boone weather] Refresh complete in ${Date.now() - now}ms`);
     slideFlavor = flavorPicker(slideSettings.flavor, {bulletin: weatherInfo.specialModes.bulletin, precip: weatherInfo.specialModes.precip});
 
 }
