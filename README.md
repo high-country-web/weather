@@ -1,65 +1,84 @@
 # Boone IntelliSTAR
 
-This fork automatically displays Boone, North Carolina weather and refreshes weather at each slide cycle without reloading the page.
+A Boone, North Carolina customization of [Mist Weather Media's IntelliStar Simulator](https://github.com/MistWeatherMedia/intellistar-1), a recreation of The Weather Channel's Local on the 8s in HTML, CSS, and JavaScript.
 
-Requires Node.js 22 or newer. Run `npm install`, fill in the private `.env` file (or copy `example.env` to `.env`), then run `npm start` and open http://localhost:8080.
+## What changed in this fork
 
-`WEATHER_API_KEY` is private and used only by Express. The old embedded credential has been removed; obtain your own key and rotate any previously exposed credential. Never add `.env` to Git. `example.env` contains placeholders only.
+- Weather is fixed to Boone, NC; IP location detection and nearby-city discovery are removed.
+- Slides start automatically with an animated **Loading Boone weather…** screen instead of the settings screen.
+- Slides loop without reloading the page. Weather requests finish before startup and refresh at the end of each cycle.
+- Regional current/forecast map slides are omitted to keep the forecast focused on Boone. Radar slides are optional.
+- Weather and radar data requests go through Express. Private credentials stay on the server.
+- Failed optional fonts and images produce warnings and allow startup to continue with available assets and fallback fonts.
+- Express logs startup, page and asset requests, HTTP status/timing, and upstream weather failures.
+- A production build minifies JavaScript and CSS while preserving shared browser globals and license notices.
 
-`MAPBOX_PUBLIC_TOKEN` accepts only a public `pk.*` browser token. It is intentionally returned to the browser; restrict it to your application's URLs in Mapbox. Without it, radar slides are omitted. Private Mapbox tokens are never returned. Weather and radar data requests pass through Express, which allows specific upstream paths, fixes weather coordinates to Boone, times out failed requests, and returns generic errors.
+See [changelog.txt](changelog.txt) for the fork changes and original release history.
 
-Open the app through Express; static-only development servers cannot provide the private weather proxy. The startup screen explains missing configuration. Weather failures use the existing unavailable-data displays and the next cycle retries. Browser autoplay rules may require a user interaction for sound.
+## Requirements and setup
 
-## Original project documentation
+Use Node.js 22 or newer and npm. The app must run through Express; a static-only host cannot provide the weather proxy.
 
-# IntelliStar Simulator 
+1. Run `npm ci` to install dependencies.
+2. Copy `example.env` to `.env` if a private `.env` does not already exist.
+3. Fill in the values below, then run `npm start`.
+4. Open [localhost:8080](http://localhost:8080), or use the port configured on your host.
 
-**IntelliStar Simulator** is a simulated recreation of "Local On The 8s" by The Weather Channel in HTML/CSS/JS, as seen from 2007 to 2008, by ***mist weather media***
+| Variable | Purpose |
+| --- | --- |
+| `WEATHER_API_KEY` | Required private Weather.com API key; used only by Express. |
+| `MAPBOX_PUBLIC_TOKEN` | Optional public `pk.*` Mapbox browser token; enables radar maps. |
+| `PORT` | Express listening port; defaults to `8080`. |
+| `NODE_ENV` | Set to `production` to make `npm start` serve the generated production build. |
 
-Online version: [i1.weatherstar.dev](https://i1.weatherstar.dev)
+On a hosting service, set these variables in its environment settings. The ignored `.env` is not uploaded through Git. Restart Express after changing configuration.
 
-© Mist Weather Media 2025.
+### Credentials
 
-------------
+Never commit `.env`, put private keys in `webroot`, or include them in public build artifacts. `example.env` contains placeholders only. The old embedded weather credential and unused traffic-key placeholder have been removed. A traffic API key is not needed by the current slides; use your own weather key and rotate any credential previously exposed in source.
 
-**Special thanks to these talented minds who made this project possible!**
+The Mapbox token is intentionally delivered to the browser. Use a public `pk.*` token with allowed-URL restrictions; private tokens are not returned. If the public token is absent or invalid, radar slides are skipped.
 
-**JensonWX** - Lead Developer  
-**Miceoroni** - Developer (Advanced Settings)   
-**zachNet** - README
-
-and the rest of the Mist Creative Team for their support!
-
-------------
-
-Need support beyond the scope of this README? Have any questions? Feel free to join our Discord for support!
-
-[***mist weather media*** on Discord](https://discord.gg/hV2w5sZQxz)
-
-------------
-
-Are you a developer? Pull requests are welcome! If you find a bug and fix it yourself, submit one with the fixed code and it may be merged into the main branch!
-
-# Initial Setup
-
-Use the Boone setup instructions at the top of this document. Credentials belong in the private `.env`, and `npm start` runs the required Express server.
-
-------------
-
-You're all set. Enjoy!
-
-Many thanks for using our simulator! We hope you like it.
-
-## Browser console diagnostics
-
-Open the browser console to follow `[Boone startup]`, `[Boone assets]`, `[Boone weather]`, and `[Boone slides]` messages. Font and image failures are warnings; startup continues using available assets and fallback fonts. Weather request logs include the endpoint path, HTTP status, and duration, without query strings, credentials, or response bodies.
-
-## Express terminal logs
-
-The terminal running `npm start` shows timestamped startup/configuration status, page and asset requests, HTTP status and duration, and weather upstream requests and failures. No extra setting is needed. A successful font request means Express served the file; browser font validation warnings still appear in the browser console. Query strings, keys, headers, response bodies, and raw upstream errors are excluded from server logs.
+The weather proxy allows specific upstream paths and parameters, fixes forecast coordinates to Boone, times out stalled requests, and returns generic errors without upstream credentials or diagnostics.
 
 ## Production build
 
-Run `npm ci` (including development dependencies), then `npm run build` and `npm run start:prod`. The build writes minified JavaScript/CSS and copies the remaining assets into `dist/webroot`. Shared browser globals and license notices are preserved. Private environment files and source maps are excluded. Source files remain in `webroot` for editing.
+Install build dependencies and generate the production assets:
 
-Production still needs the Express server and runtime environment variables. Keep `app.js`, `package.json`, installed production dependencies, and the generated `dist` directory on the host. You may run `npm prune --omit=dev` after building. `npm start` also serves the production build when the host sets `NODE_ENV=production`; otherwise it serves source assets. Rebuild and restart after source changes. Generated `dist` files are ignored by Git.
+```sh
+npm ci --include=dev
+npm run build
+npm run start:prod
+```
+
+The build recreates `dist/webroot`, minifies JavaScript and CSS, and copies images, fonts, audio, and other assets. It excludes dotfiles and development source maps. Editable source remains in `webroot`; generated `dist` files are ignored by Git.
+
+`npm run start:prod` serves the build through Express. `npm start` also serves it when `NODE_ENV=production`; otherwise it serves the source assets. Production startup refuses to serve a missing or incomplete build. Rebuild and restart after source changes.
+
+For deployment, keep `app.js`, `package.json`, the installed production dependencies, and the complete generated `dist` directory, including `build-info.json`. Supply credentials separately at runtime. You may run `npm prune --omit=dev` after building; the build step itself needs development dependencies. HTML, images, fonts, audio, and the Express server are not minified by this build.
+
+## Logs and troubleshooting
+
+The terminal running Express shows timestamped messages automatically:
+
+- `[Boone server]`: startup mode, asset directory, and whether configuration is present.
+- `[Boone page]` and `[Boone assets]`: requested paths, HTTP status, and elapsed time.
+- `[Boone weather]`: weather requests, upstream HTTP failures, timeouts, and response timing.
+
+Server logs exclude query strings, headers, response bodies, raw upstream errors, and credential values. Browser console diagnostics supplement these logs with startup stages, font/image loading, and slide-cycle messages.
+
+- **Missing weather configuration:** set `WEATHER_API_KEY` in the private `.env` or hosting environment, then restart Express.
+- **Production assets missing:** run `npm run build` before starting in production mode.
+- **Weather unavailable:** check the Express terminal for the upstream status or timeout; the next slide cycle retries weather requests.
+- **Font warnings:** a successful HTTP response means Express served the file; the browser may still reject its font data. Startup continues with fallback fonts.
+- **No sound:** browser autoplay rules may require a user interaction before audio can play.
+
+## Original project and credits
+
+The original simulator was created by **Mist Weather Media**. Its upstream online version is [i1.weatherstar.dev](https://i1.weatherstar.dev); this fork's Boone-specific behavior is described above.
+
+© Mist Weather Media 2025.
+
+Special thanks to **JensonWX** (Lead Developer), **Miceoroni** (Advanced Settings), **zachNet** (original README), and the rest of the Mist Creative Team.
+
+Upstream community: [Mist Weather Media on Discord](https://discord.gg/hV2w5sZQxz). See [LICENSE](LICENSE) for the project's license.
