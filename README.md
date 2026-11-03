@@ -7,7 +7,7 @@ A Boone, North Carolina customization of [Mist Weather Media's IntelliStar Simul
 - Weather is fixed to Boone, NC; IP location detection and nearby-city discovery are removed.
 - Slides start automatically with an animated **Loading Boone weather…** screen instead of the settings screen.
 - Slides loop without reloading the page. Weather requests finish before startup and refresh at the end of each cycle.
-- Regional current/forecast map slides are omitted to keep the forecast focused on Boone. Radar slides are optional.
+- Regional current/forecast map slides are omitted to keep the forecast focused on Boone. Radar slides are optional and remain hidden during preloading until their slide begins.
 - Weather and radar data requests go through Express. Private credentials stay on the server.
 - Failed optional fonts and images produce warnings and allow startup to continue with available assets and fallback fonts.
 - Express logs startup, viewer starts, slide changes/cycle refreshes, and weather diagnostics; routine asset/image and radar tile requests are suppressed.
@@ -74,6 +74,7 @@ Server logs exclude query strings, headers, response bodies, raw upstream errors
 - **Production assets missing:** run `npm run build` before starting in production mode.
 - **Weather unavailable:** check the Express terminal for the upstream status or timeout; the next slide cycle retries weather requests.
 - **Font warnings:** a successful HTTP response means Express served the file; the browser may still reject its font data. Startup continues with fallback fonts.
+- **Mobile startup:** phones/tablets skip the desktop radar stack, which allocates eight WebGL maps. Weather slides continue; the Express console records `radar disabled (mobile)`. Browsers without supported WebGL also skip radar, and map initialization errors fall back to weather slides. This reduces a likely source of graphics-memory crashes; physical-device validation is still needed.
 - **No sound:** browser autoplay rules may require a user interaction before audio can play.
 
 ## Original project and credits

@@ -61,6 +61,8 @@ app.post('/api/view-events', express.json({limit: '1kb'}), (req, res) => {
   if (event === 'slide' && slideNames.has(slide) && Number.isInteger(position) &&
       Number.isInteger(total) && position >= 1 && position <= total && total <= 100) {
     serverLog('info', `[Boone slides] View ${viewId}: ${position}/${total} ${slide}`);
+  } else if (event === 'radar-disabled' && ['mobile', 'unsupported', 'no-token', 'initialization-failed'].includes(slide)) {
+    serverLog('info', `[Boone viewer] View ${viewId}: radar disabled (${slide}); using weather slides`);
   } else if (event === 'cycle') {
     serverLog('info', `[Boone slides] View ${viewId}: cycle complete; refreshing weather`);
   } else return res.sendStatus(400);

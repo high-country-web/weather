@@ -1,23 +1,14 @@
 Make sure to report any bugs or issues in the Issues tab!
 
 = NOVEMBER 3, 2026 | BOONE FORK UPDATE =
- -  Fixed the location to Boone, North Carolina; removed IP location and nearby-city discovery.
- -  Added automatic startup and an animated Loading Boone weather screen; hid the settings screen.
- -  Replaced end-of-cycle page reloads with continuous slides and a weather refresh each cycle.
- -  Made startup and cycle refreshes wait for weather requests; fixed forecast fallback and repeated-slide content issues.
- -  Removed regional current/forecast map slides to keep the forecast focused on Boone.
- -  Added a private, ignored .env and placeholder example.env for runtime configuration.
- -  Moved private weather credentials to Express and routed browser weather/radar data requests through a restricted proxy.
- -  Added upstream timeouts and generic error responses; removed the embedded weather key and unused traffic-key placeholder.
- -  Handled Mapbox public pk.* tokens separately; omitted radar slides when no valid public token is configured.
- -  Fixed failed optional fonts blocking startup; added image loading outcomes and fallback warnings.
- -  Added timestamped Express terminal logs for startup, viewer starts, slide names/positions, cycle refreshes, and weather diagnostics without credentials or query strings.
- -  Suppressed routine asset/image requests and radar TileServer traffic in Express logs; added best-effort browser slide reports with random view IDs.
- -  Added browser diagnostics for startup stages, assets, weather requests, and slide cycles.
- -  Added npm run build using esbuild to minify JavaScript/CSS into dist/webroot while preserving browser globals and license notices.
- -  Added npm run start:prod and NODE_ENV=production support, with checks for missing or incomplete builds.
- -  Excluded private configuration and source maps from public builds; retained editable source assets.
- -  Documented setup, production deployment, credentials, logging, and troubleshooting; saved project requirements in AGENTS.md.
+ -  Customized the weather display for Boone, North Carolina.
+ -  Added automatic startup with an animated loading screen.
+ -  Added continuous slide playback with weather refreshed each cycle.
+ -  Added private server-side API configuration and a placeholder environment file.
+ -  Added Express console diagnostics for site viewing and slide playback.
+ -  Added a minified production build and production server mode.
+ -  Added a mobile-friendly startup fallback.
+
 = JULY 24, 2026 | VERSION 1.2 =
  -  Blue LDL added
  -  2010 icons added

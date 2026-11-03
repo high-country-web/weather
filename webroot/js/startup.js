@@ -1,3 +1,23 @@
+// Avoid allocating the eight-map desktop radar stack on phones/tablets.
+function radarUnavailableReason() {
+    const mobile = navigator.userAgentData?.mobile ||
+        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '') ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+        (window.matchMedia('(pointer: coarse)').matches &&
+            Math.min(screen.width, screen.height) <= 1024);
+    if (mobile) return 'mobile';
+    try {
+        if (typeof mapboxgl === 'undefined' || !mapboxgl.supported()) return 'unsupported';
+    } catch (_) { return 'unsupported'; }
+    return null;
+}
+
+function skipRadar(reason) {
+    slideSettings.order = slideSettings.order.filter(s => !['radarDoppler', 'localDoppler'].includes(s.function));
+    console.warn(`[Boone startup] Radar disabled (${reason}); continuing weather slides`);
+    if (window.reportBooneSlide) window.reportBooneSlide('radar-disabled', reason);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     console.info('[Boone startup] Starting');
     let stage = 'configuration';
@@ -10,18 +30,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (window.setBooneViewId) window.setBooneViewId(config.viewId);
         console.info('[Boone startup] Configuration ready');
         map_key = config.mapboxPublicToken;
-        if (!map_key) slideSettings.order = slideSettings.order.filter(s => !['radarDoppler', 'localDoppler'].includes(s.function));
+        let radarReason = map_key ? radarUnavailableReason() : 'no-token';
+        if (radarReason) skipRadar(radarReason);
         inSettings = false;
         versionsChanger(appearanceSettings.graphicsPackage);
         stage = 'assets and weather';
         console.info('[Boone startup] Loading assets and weather');
         await Promise.all([preloadFonts(), preloadImages(), grabData()]);
         stage = 'maps';
-        if (map_key) {
+        if (!radarReason) {
             console.info('[Boone startup] Creating radar maps');
-            await createMaps();
-        } else {
-            console.info('[Boone startup] Public Mapbox token absent; radar slides skipped');
+            try {
+                await createMaps();
+            } catch (_) {
+                disposeMaps();
+                skipRadar('initialization-failed');
+            }
         }
         slideFlavor = slideSettings;
         stage = 'slides';

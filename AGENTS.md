@@ -11,3 +11,5 @@
 - Keep the Express console focused on server startup, viewer starts, slide changes/cycle refreshes, and weather/server diagnostics. Suppress routine asset/image requests and radar TileServer traffic. Never print credentials, query strings, headers, response bodies, or token-bearing URLs. Browser diagnostics may supplement these server logs.
 - Treat failed optional fonts and images as warnings so they cannot block automatic startup.
 - Provide a production build that minifies JavaScript and CSS, preserves shared browser globals, and serves through Express without including private configuration in public artifacts.
+- Keep radar maps hidden during startup/preloading; reveal them only when a radar slide begins.
+- Keep the fork changelog focused on major features relative to upstream; omit intermediate fixes, logging tweaks, and development-process details.

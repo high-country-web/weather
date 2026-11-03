@@ -3,7 +3,7 @@ var regradar, locradar, radarsat,
   regmap, locmap,
   regtimestamps, loctimestamps, sattimestamps,
   radarAnimation;
-mapboxgl.accessToken = "";
+if (typeof mapboxgl !== "undefined") mapboxgl.accessToken = "";
 var mapStyle = "mapbox://styles/colster/cmiccqynn00as01s4bt6501il";
 
 async function createMaps() {
@@ -522,34 +522,16 @@ function addRadarCities(){
 }
 
 async function preloadRadars(){
+  // Prepare data while the maps remain hidden. Radar slide programs reveal
+  // their own containers and resize the maps when it is time to display them.
   await initializeRadar(regradar);
   await initializeRadar(locradar);
-  $('.radar').fadeIn(0);
-  $('#regradar').fadeIn(0);
-  $('#regmap').fadeIn(0);
-  $('#regoutlines').fadeIn(0);
-  $('#regoutlinestrans').fadeIn(0);
-  $('#locradar').fadeIn(0);
-  $('#locmap').fadeIn(0);
-  $('#locoutlines').fadeIn(0);
-  $('#locoutlinestrans').fadeIn(0);
-  locmap.resize();
-  locradar.resize();
-  locoutlines.resize();
-  locoutlinestrans.resize();
-  regmap.resize();
-  regradar.resize();
-  regoutlines.resize();
-  regoutlinestrans.resize();
-  setTimeout(() => {
-    $('.radar').fadeOut(0);
-    $('#regradar').fadeOut(0);
-    $('#regmap').fadeOut(0);
-    $('#regoutlines').fadeOut(0);
-    $('#regoutlinestrans').fadeOut(0);
-    $('#locradar').fadeOut(0);
-    $('#locmap').fadeOut(0);
-    $('#locoutlines').fadeOut(0);
-    $('#locoutlinestrans').fadeOut(0);
-  }, 2000);
+}
+
+function disposeMaps() {
+  clearInterval(radarAnimation);
+  for (const map of [regradar, locradar, regoutlines, locoutlines,
+      regoutlinestrans, locoutlinestrans, regmap, locmap]) {
+    try { if (map) map.remove(); } catch (_) {}
+  }
 }
