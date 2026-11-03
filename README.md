@@ -53,3 +53,13 @@ Many thanks for using our simulator! We hope you like it.
 ## Browser console diagnostics
 
 Open the browser console to follow `[Boone startup]`, `[Boone assets]`, `[Boone weather]`, and `[Boone slides]` messages. Font and image failures are warnings; startup continues using available assets and fallback fonts. Weather request logs include the endpoint path, HTTP status, and duration, without query strings, credentials, or response bodies.
+
+## Express terminal logs
+
+The terminal running `npm start` shows timestamped startup/configuration status, page and asset requests, HTTP status and duration, and weather upstream requests and failures. No extra setting is needed. A successful font request means Express served the file; browser font validation warnings still appear in the browser console. Query strings, keys, headers, response bodies, and raw upstream errors are excluded from server logs.
+
+## Production build
+
+Run `npm ci` (including development dependencies), then `npm run build` and `npm run start:prod`. The build writes minified JavaScript/CSS and copies the remaining assets into `dist/webroot`. Shared browser globals and license notices are preserved. Private environment files and source maps are excluded. Source files remain in `webroot` for editing.
+
+Production still needs the Express server and runtime environment variables. Keep `app.js`, `package.json`, installed production dependencies, and the generated `dist` directory on the host. You may run `npm prune --omit=dev` after building. `npm start` also serves the production build when the host sets `NODE_ENV=production`; otherwise it serves source assets. Rebuild and restart after source changes. Generated `dist` files are ignored by Git.

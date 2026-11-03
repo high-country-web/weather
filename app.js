@@ -3,7 +3,39 @@ const path = require('node:path');
 const fs = require('node:fs');
 const envFile = path.join(__dirname, '.env');
 if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
+const production = process.env.NODE_ENV === 'production' || process.argv.includes('--production');
+if (production) process.env.NODE_ENV = 'production';
+const publicRoot = path.join(__dirname, production ? 'dist/webroot' : 'webroot');
+if (production && (!fs.existsSync(path.join(__dirname, 'dist/build-info.json')) || !fs.existsSync(path.join(publicRoot, 'index.html')))) {
+  throw new Error('Production assets are missing or incomplete. Run npm run build before npm run start:prod.');
+}
 const app = express();
+// Log paths and status only: query strings, headers, bodies, and error objects
+// can contain credentials and must never be written to the terminal.
+function serverLog(level, message) {
+  for (const value of [process.env.WEATHER_API_KEY, process.env.MAPBOX_PUBLIC_TOKEN]) {
+    if (value) {
+      message = message.split(value).join('[redacted]');
+      message = message.split(encodeURIComponent(value)).join('[redacted]');
+    }
+  }
+  console[level](`${new Date().toISOString()} ${message}`);
+}
+app.use((req, res, next) => {
+  const started = performance.now();
+  const pathname = req.path;
+  const category = pathname.startsWith('/api/weather') ? 'weather'
+    : pathname.startsWith('/api/') ? 'server'
+    : pathname === '/' ? 'page' : 'assets';
+  res.once('finish', () => {
+    serverLog(res.statusCode >= 400 ? 'warn' : 'info',
+      `[Boone ${category}] ${req.method} ${JSON.stringify(pathname)} HTTP ${res.statusCode} ${Math.round(performance.now() - started)}ms`);
+  });
+  res.once('close', () => {
+    if (!res.writableFinished) serverLog('warn', `[Boone ${category}] Request interrupted: ${JSON.stringify(pathname)}`);
+  });
+  next();
+});
 const allowedPaths = new Set([
   '/v3/wx/observations/current', '/v3/wx/forecast/daily/7day',
   '/v3/wx/forecast/hourly/1day', '/v3/wx/forecast/hourly/2day',
@@ -30,28 +62,45 @@ app.use('/api/weather', async (req, res) => {
     if (!allowedParams.has(key)) return res.status(400).json({error: 'Unsupported parameter'});
   }
   const secret = process.env.WEATHER_API_KEY;
-  if (!secret) return res.status(503).json({error: 'Weather service is not configured'});
+  if (!secret) {
+    serverLog('warn', '[Boone weather] Request unavailable: WEATHER_API_KEY is missing');
+    return res.status(503).json({error: 'Weather service is not configured'});
+  }
   const upstream = new URL(incoming.pathname, 'https://api.weather.com');
   upstream.search = incoming.search;
   if (!incoming.pathname.includes('TileServer') && !incoming.pathname.includes('/alerts/detail') && !incoming.pathname.startsWith('/v1/')) {
     upstream.searchParams.set('geocode', '36.2168,-81.6746');
   }
   upstream.searchParams.set('apiKey', secret);
+  serverLog('info', `[Boone weather] Upstream request: ${incoming.pathname}`);
   try {
     const response = await fetch(upstream, {signal: AbortSignal.timeout(12000), redirect: 'error'});
-    if (!response.ok) return res.status(502).json({error: 'Weather service unavailable'});
+    if (!response.ok) {
+      serverLog('warn', `[Boone weather] Upstream HTTP ${response.status}: ${incoming.pathname}`);
+      return res.status(502).json({error: 'Weather service unavailable'});
+    }
     if (response.status === 204) return res.sendStatus(204);
     const data = Buffer.from(await response.arrayBuffer());
     // Never forward upstream diagnostics, headers, URLs, or echoed credentials.
-    if (data.includes(Buffer.from(secret))) return res.status(502).json({error: 'Invalid weather response'});
+    if (data.includes(Buffer.from(secret))) {
+      serverLog('warn', '[Boone weather] Blocked an upstream response containing a private credential');
+      return res.status(502).json({error: 'Invalid weather response'});
+    }
     res.type(incoming.pathname.includes('/tile/') ? 'image/png' : 'application/json').send(data);
-  } catch (_) {
+  } catch (error) {
+    const reason = error?.name === 'TimeoutError' ? 'timed out' : 'connection or response failed';
+    serverLog('warn', `[Boone weather] Upstream ${reason}: ${incoming.pathname}`);
     res.status(502).json({error: 'Weather service unavailable'});
   }
 });
-app.use(express.static(path.join(__dirname, 'webroot'), {dotfiles: 'deny'}));
+app.use(express.static(publicRoot, {dotfiles: 'deny'}));
 if (require.main === module) {
   const port = Number(process.env.PORT || 8080);
-  app.listen(port, '0.0.0.0', () => console.log(`Boone weather: http://localhost:${port}`));
+  serverLog('info', `[Boone server] Starting on port ${port} (${production ? 'production' : 'development'})`);
+  serverLog('info', `[Boone server] Serving ${production ? 'dist/webroot (minified build)' : 'webroot'}`);
+  serverLog('info', `[Boone server] Weather API: ${process.env.WEATHER_API_KEY ? 'configured' : 'missing'}`);
+  const token = process.env.MAPBOX_PUBLIC_TOKEN || '';
+  serverLog('info', `[Boone server] Public Mapbox token: ${token.startsWith('pk.') ? 'configured' : token ? 'invalid; radar disabled' : 'missing; radar disabled'}`);
+  app.listen(port, '0.0.0.0', () => serverLog('info', `[Boone server] Ready at http://localhost:${port}; request logging enabled`));
 }
 module.exports = app;
