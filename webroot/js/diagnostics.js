@@ -27,3 +27,24 @@
         });
     });
 })();
+
+// Slides are rendered in the browser; report only lifecycle events to Express.
+(() => {
+    let viewId;
+    let warned = false;
+    window.setBooneViewId = id => { viewId = id; };
+    window.reportBooneSlide = (event, slide, position, total) => {
+        if (!viewId) return;
+        fetch('/api/view-events', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({viewId, event, slide, position, total}),
+            keepalive: true
+        }).then(response => {
+            if (!response.ok) throw new Error('Slide log unavailable');
+        }).catch(() => {
+            if (!warned) console.warn('[Boone slides] Server logging unavailable; playback continues');
+            warned = true;
+        });
+    };
+})();

@@ -10,7 +10,7 @@ A Boone, North Carolina customization of [Mist Weather Media's IntelliStar Simul
 - Regional current/forecast map slides are omitted to keep the forecast focused on Boone. Radar slides are optional.
 - Weather and radar data requests go through Express. Private credentials stay on the server.
 - Failed optional fonts and images produce warnings and allow startup to continue with available assets and fallback fonts.
-- Express logs startup, page and asset requests, HTTP status/timing, and upstream weather failures.
+- Express logs startup, viewer starts, slide changes/cycle refreshes, and weather diagnostics; routine asset/image and radar tile requests are suppressed.
 - A production build minifies JavaScript and CSS while preserving shared browser globals and license notices.
 
 See [changelog.txt](changelog.txt) for the fork changes and original release history.
@@ -62,8 +62,11 @@ For deployment, keep `app.js`, `package.json`, the installed production dependen
 The terminal running Express shows timestamped messages automatically:
 
 - `[Boone server]`: startup mode, asset directory, and whether configuration is present.
-- `[Boone page]` and `[Boone assets]`: requested paths, HTTP status, and elapsed time.
+- `[Boone viewer]`: page requests and the start of each browser view, identified by a random view ID.
+- `[Boone slides]`: slide names/positions and cycle refreshes reported by each browser view.
 - `[Boone weather]`: weather requests, upstream HTTP failures, timeouts, and response timing.
+
+Routine asset/image requests and radar TileServer traffic are omitted from terminal logs. Slide reports are best effort and do not block playback.
 
 Server logs exclude query strings, headers, response bodies, raw upstream errors, and credential values. Browser console diagnostics supplement these logs with startup stages, font/image loading, and slide-cycle messages.
 

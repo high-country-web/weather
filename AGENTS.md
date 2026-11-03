@@ -8,6 +8,6 @@
 - Keep private API keys on the Express server and route browser weather requests through it. Handle Mapbox’s public browser token separately.
 - Never commit secrets or return private keys to the browser.
 - Preserve unrelated existing changes.
-- Log server startup, page and asset requests, HTTP status/timing, and weather upstream failures in the Express server console. Never print credentials, query strings, headers, response bodies, or token-bearing URLs. Browser diagnostics may supplement these server logs.
+- Keep the Express console focused on server startup, viewer starts, slide changes/cycle refreshes, and weather/server diagnostics. Suppress routine asset/image requests and radar TileServer traffic. Never print credentials, query strings, headers, response bodies, or token-bearing URLs. Browser diagnostics may supplement these server logs.
 - Treat failed optional fonts and images as warnings so they cannot block automatic startup.
 - Provide a production build that minifies JavaScript and CSS, preserves shared browser globals, and serves through Express without including private configuration in public artifacts.

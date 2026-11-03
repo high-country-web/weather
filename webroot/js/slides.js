@@ -40,6 +40,7 @@ function slideKickOff() {
 async function slideCallBack() {
     idx++;
     if (idx >= slideFlavor.order.length) {
+        if (window.reportBooneSlide) window.reportBooneSlide('cycle');
         console.info('[Boone slides] Cycle complete; refreshing weather');
         await grabData();
         idx = 0;
@@ -522,6 +523,7 @@ var slidePrograms = {
     }
 } //end of slidePrograms
 function showSlides() {
+    if (window.reportBooneSlide) window.reportBooneSlide('slide', slideFlavor.order[idx].function, idx + 1, slideFlavor.order.length);
     console.info(`[Boone slides] Showing ${idx + 1}/${slideFlavor.order.length}: ${slideFlavor.order[idx].function}`);
     slideLength = slideFlavor.order[idx].slideDelay;
 

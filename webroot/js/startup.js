@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!response.ok) throw new Error('Configuration unavailable');
         const config = await response.json();
         if (!config.weatherConfigured) throw new Error('Add WEATHER_API_KEY to the private .env file and restart the server.');
+        if (window.setBooneViewId) window.setBooneViewId(config.viewId);
         console.info('[Boone startup] Configuration ready');
         map_key = config.mapboxPublicToken;
         if (!map_key) slideSettings.order = slideSettings.order.filter(s => !['radarDoppler', 'localDoppler'].includes(s.function));
