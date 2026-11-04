@@ -47,6 +47,13 @@
 </style></head>
 
 <body>
+<section id="audio-permission" aria-label="Weather audio" hidden>
+    <p>Enable weather audio?</p>
+    <p>Allow music and narration by selecting Enable sound.</p>
+    <button id="enable-sound" type="button">Enable sound</button>
+    <button id="dismiss-sound" type="button">Continue without sound</button>
+</section>
+<button id="enable-sound-later" type="button" hidden>Enable sound</button>
 <div id="startup" role="status"><div class="spinner" aria-hidden="true"></div><span>Loading Boone weather…</span></div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script type="text/javascript" src="js/jplayer/jquery.jplayer.min.js"></script>

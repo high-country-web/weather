@@ -1,3 +1,34 @@
+#audio-permission, #enable-sound-later {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 100000;
+    max-width: calc(100vw - 32px);
+    padding: 16px;
+    border: 1px solid #ffffff80;
+    border-radius: 8px;
+    background: #09294b;
+    color: white;
+    font: 16px/1.4 Arial, sans-serif;
+    box-shadow: 0 4px 20px #0008;
+}
+#audio-permission[hidden], #enable-sound-later[hidden] { display: none; }
+#audio-permission p { margin-bottom: 10px; font: inherit; color: white; }
+#audio-permission button {
+    margin: 4px 8px 0 0;
+    padding: 10px 14px;
+    border: 1px solid white;
+    border-radius: 4px;
+    background: white;
+    color: #09294b;
+    font: inherit;
+    cursor: pointer;
+}
+#audio-permission button:focus-visible, #enable-sound-later:focus-visible {
+    outline: 3px solid #ffd75e;
+    outline-offset: 3px;
+}
+
 @font-face {
     font-family: "Interstate";
     src: url(fonts/Interstate-Regular.woff);

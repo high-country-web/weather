@@ -3,6 +3,7 @@ class AudioManager {
         this.playlist = []
         this.$players = $('<div id="players">')
         this.isMobile = false
+        this.soundEnabled = false
         this.vocallocal = {
             cc: [],
             lf: [`/vocallocal/DAYPART_DEFAULT1.wav`],
@@ -23,6 +24,22 @@ class AudioManager {
         var firstHalf = this.playlist
         var secondHalf = firstHalf.splice(Math.floor(Math.random() * firstHalf.length))
         this.playlist = [...secondHalf, ...firstHalf]
+    }
+
+    showSoundPrompt() {
+        const prompt = document.getElementById('audio-permission');
+        if (prompt) prompt.hidden = false;
+    }
+
+    enableSound() {
+        this.soundEnabled = true;
+        document.getElementById('audio-permission').hidden = true;
+        // Resume the current music player directly inside the user's click.
+        // Discard old narration rather than replaying a previous slide.
+        this.$players.find('.voice').jPlayer('destroy').remove();
+        const $music = this.$players.find('.music.is-playing');
+        if ($music.length) $music.jPlayer('play');
+        else if (audioSettings.enableMusic) this.startPlaying(this.playlist, true);
     }
 
     playCC(vl) {
@@ -70,6 +87,7 @@ class AudioManager {
     }
 
     startPlaying(arr, loop) {
+        if (!this.soundEnabled || !arr.length) return;
         var audioType = loop ? 'music' : 'voice'
         if (this.$players.find(`.${audioType}`).length > 0) return;
 
@@ -93,6 +111,25 @@ class AudioManager {
                 }
             });
             this.$players.append($div);
+            // jPlayer predates play() promises. Handle browser policy failures
+            // on our own players without logging media URLs or rejected promises.
+            const media = $div.data('jPlayer').htmlElement.audio;
+            const nativePlay = media.play.bind(media);
+            media.play = () => {
+                const handleFailure = (error) => {
+                    if (error.name === 'NotAllowedError') {
+                        this.soundEnabled = false;
+                        this.showSoundPrompt();
+                    } else if (error.name !== 'AbortError') {
+                        console.warn('[Boone audio] Unable to play audio');
+                    }
+                };
+                try {
+                    const playing = nativePlay();
+                    if (playing && playing.catch) return playing.catch(handleFailure);
+                    return playing;
+                } catch (error) { handleFailure(error); }
+            };
             return $div;
         }
         var $player = initPlayer('p1', audioType)
@@ -116,7 +153,7 @@ class AudioManager {
 
         const preloadTrack = (trackName) => {
             try {
-                $preloader.jPlayer('setMedia', { mp3: trackName }).jPlayer('play', audioType == 'music' ? Math.abs(audioSettings.offset) : 0).jPlayer('stop');
+                $preloader.jPlayer('setMedia', { mp3: trackName }).jPlayer('load');
             } catch (e) {
                 setTimeout(() => preloadTrack(trackName), 500);
             }
@@ -134,7 +171,11 @@ class AudioManager {
             $player = null, $preloader = null;
             $player = tempAudio2;
             $preloader = tempAudio;
-            $player.jPlayer('play', audioType == 'music' ? Math.abs(audioSettings.offset) : 0);
+            $preloader.removeClass('is-playing');
+            $player.addClass('is-playing');
+            const offset = audioType == 'music' ? Math.abs(audioSettings.offset) : 0;
+            if (offset) $player.jPlayer('play', offset);
+            else $player.jPlayer('play');
 
             // $(document).one('mousedown', () => {
             //     if (!this.isMobile) {

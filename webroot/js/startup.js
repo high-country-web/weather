@@ -54,8 +54,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         startLoops();
         document.getElementById('startup').remove();
         console.info('[Boone startup] Ready');
-        // Browsers may require a click before permitting sound.
-        try { audioPlayer.startPlaying(audioPlayer.playlist, true); } catch (_) {}
+        if (audioSettings.enableMusic || audioSettings.narrations) {
+            document.getElementById('enable-sound').addEventListener('click', () => audioPlayer.enableSound());
+            document.getElementById('dismiss-sound').addEventListener('click', () => {
+                document.getElementById('audio-permission').hidden = true;
+                document.getElementById('enable-sound-later').hidden = false;
+            });
+            document.getElementById('enable-sound-later').addEventListener('click', () => {
+                document.getElementById('enable-sound-later').hidden = true;
+                audioPlayer.showSoundPrompt();
+            });
+            audioPlayer.showSoundPrompt();
+        }
     } catch (error) {
         console.error(`[Boone startup] Failed during ${stage} (${error.name || 'Error'})`);
         document.querySelector('#startup span').textContent = `Unable to start Boone weather during ${stage}: ${error.message}`;
