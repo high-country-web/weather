@@ -1,0 +1,5 @@
+node_modules/
+dist/
+webroot/js/utils/
+webroot/js/jplayer/
+package-lock.json

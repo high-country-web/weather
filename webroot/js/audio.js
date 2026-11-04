@@ -1,204 +1,274 @@
 class AudioManager {
-    constructor() {
-        this.playlist = []
-        this.$players = $('<div id="players">')
-        this.isMobile = false
-        this.soundEnabled = false
-        this.vocallocal = {
-            cc: [],
-            lf: [`/vocallocal/DAYPART_DEFAULT1.wav`],
-            bl: []
+  constructor() {
+    this.playlist = [];
+    this.$players = $('<div id="players">');
+    this.soundEnabled = false;
+    this.preferences = { music: 80, narration: 100, muted: false, choice: 'ask' };
+    this.loadPreferences();
+    this.vocallocal = {
+      cc: [],
+      lf: ['/vocallocal/DAYPART_DEFAULT1.wav'],
+      bl: [],
+    };
+
+    $('body').append(this.$players);
+
+    if (audioSettings.enableMusic) {
+      this.buildPlaylist();
+      if (audioSettings.randomStart) this.shuffleStart();
+      if (audioSettings.shuffle) shuffle(this.playlist);
+    }
+  }
+
+  loadPreferences() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('weather-audio') || 'null');
+      if (saved) {
+        for (const key of ['music', 'narration']) {
+          if (Number.isFinite(saved[key]))
+            this.preferences[key] = Math.max(0, Math.min(100, saved[key]));
         }
+        this.preferences.muted = saved.muted === true;
+        if (['enabled', 'silent'].includes(saved.choice)) this.preferences.choice = saved.choice;
+      }
+    } catch (_) {
+      /* Storage is optional. */
+    }
+  }
 
-        $('body').append(this.$players)
+  shuffleStart() {
+    var firstHalf = this.playlist;
+    var secondHalf = firstHalf.splice(Math.floor(Math.random() * firstHalf.length));
+    this.playlist = [...secondHalf, ...firstHalf];
+  }
 
-        if (audioSettings.enableMusic) {
-            this.buildPlaylist();
-            if (audioSettings.randomStart) { this.shuffleStart() }
-            if (audioSettings.shuffle) { shuffle(this.playlist) }
-            //this.startPlaying(this.playlist, true);
+  showSoundPrompt() {
+    const prompt = document.getElementById('audio-permission');
+    if (prompt) prompt.hidden = false;
+  }
+
+  enableSound() {
+    this.soundEnabled = true;
+    this.preferences.choice = 'enabled';
+    this.preferences.muted = false;
+    this.savePreferences();
+    document.getElementById('audio-permission').hidden = true;
+    // Resume the current music player directly inside the user's click.
+    // Discard old narration rather than replaying a previous slide.
+    this.$players.find('.voice').jPlayer('destroy').remove();
+    const $music = this.$players.find('.music.is-playing');
+    if ($music.length) $music.jPlayer('play');
+    else if (audioSettings.enableMusic) this.startPlaying(this.playlist, true);
+    this.applyVolumes();
+  }
+
+  savePreferences() {
+    try {
+      localStorage.setItem('weather-audio', JSON.stringify(this.preferences));
+    } catch (_) {}
+    this.applyVolumes();
+    if (window.updateAudioControls) window.updateAudioControls();
+  }
+
+  applyVolumes() {
+    const voiceActive = this.$players.find('.voice.is-playing').length > 0;
+    const music = (this.preferences.music / 100) * (voiceActive ? 0.375 : 1);
+    this.$players.find('.music').jPlayer('volume', this.preferences.muted ? 0 : music);
+    this.$players
+      .find('.voice')
+      .jPlayer('volume', this.preferences.muted ? 0 : this.preferences.narration / 100);
+  }
+
+  continueSilently() {
+    this.soundEnabled = false;
+    this.preferences.choice = 'silent';
+    this.preferences.muted = true;
+    this.$players.find('.jplayer').jPlayer('pause');
+    this.savePreferences();
+    document.getElementById('audio-permission').hidden = true;
+  }
+
+  playCC(vl) {
+    if (vl) {
+      this.startPlaying(this.vocallocal.cc, false);
+    } else {
+      this.startPlaying(['narrations/Your_current_conditions.mp3'], false);
+    }
+  }
+
+  playRadar() {
+    this.startPlaying(
+      [`/vocallocal/doppler/LRADAR_DEFAULT${Math.floor(Math.random()) + 1}.wav`],
+      false,
+    );
+  }
+
+  playBulletin() {
+    this.startPlaying(this.vocallocal.bl, false);
+  }
+
+  playLF() {
+    this.startPlaying(this.vocallocal.lf, false);
+  }
+
+  playEF() {
+    this.startPlaying(
+      [`/vocallocal/weekahead/7DAY_DEFAULT${Math.floor(Math.random() * 3) + 1}.wav`],
+      false,
+    );
+  }
+
+  playSevere(name) {
+    if (name == 'Flash Flood Warning') {
+      this.startPlaying(
+        ['/vocallocal/beep.wav', '/vocallocal/FFLOOD_DEFAULT.wav', '/vocallocal/beep.wav'],
+        false,
+      );
+    } else if (name == 'Tornado Warning') {
+      this.startPlaying(
+        ['/vocallocal/beep.wav', '/vocallocal/TORNADO_DEFAULT.wav', '/vocallocal/beep.wav'],
+        false,
+      );
+    } else if (name == 'Severe Thunderstorm Warning') {
+      this.startPlaying(
+        ['/vocallocal/beep.wav', '/vocallocal/TSTORM_DEFAULT.wav', '/vocallocal/beep.wav'],
+        false,
+      );
+    } else {
+      this.startPlaying(
+        [
+          '/vocallocal/beep.wav',
+          '/vocallocal/beep.wav',
+          '/vocallocal/beep.wav',
+          '/vocallocal/beep.wav',
+        ],
+        false,
+      );
+    }
+  }
+
+  buildPlaylist() {
+    this.playlist = [];
+    var musicPath = 'music/';
+    for (var i = 0; i < audioSettings.order.length; i++) {
+      this.playlist.push(`${musicPath}${audioSettings.order[i]}.mp3`);
+    }
+  }
+
+  handlePlaybackFailure(error) {
+    if (error.name === 'NotAllowedError') {
+      this.soundEnabled = false;
+      this.showSoundPrompt();
+      if (window.updateAudioControls) window.updateAudioControls();
+    } else if (error.name !== 'AbortError') {
+      console.warn('[Boone audio] Unable to play audio');
+    }
+  }
+
+  guardPlayerPlayback(media) {
+    // jPlayer predates play() promises. Handle policy failures without logging media URLs.
+    const nativePlay = media.play.bind(media);
+    media.play = () => {
+      try {
+        const playing = nativePlay();
+        if (playing && playing.catch) {
+          return playing.catch((error) => this.handlePlaybackFailure(error));
         }
-    }
+        return playing;
+      } catch (error) {
+        this.handlePlaybackFailure(error);
+      }
+    };
+  }
 
-    shuffleStart() {
-        var firstHalf = this.playlist
-        var secondHalf = firstHalf.splice(Math.floor(Math.random() * firstHalf.length))
-        this.playlist = [...secondHalf, ...firstHalf]
-    }
+  startPlaying(arr, loop) {
+    if (!this.soundEnabled || !arr.length) return;
+    var audioType = loop ? 'music' : 'voice';
+    if (this.$players.find(`.${audioType}`).length > 0) return;
 
-    showSoundPrompt() {
-        const prompt = document.getElementById('audio-permission');
-        if (prompt) prompt.hidden = false;
-    }
+    var current = -1;
+    const len = arr.length;
 
-    enableSound() {
-        this.soundEnabled = true;
-        document.getElementById('audio-permission').hidden = true;
-        // Resume the current music player directly inside the user's click.
-        // Discard old narration rather than replaying a previous slide.
-        this.$players.find('.voice').jPlayer('destroy').remove();
-        const $music = this.$players.find('.music.is-playing');
-        if ($music.length) $music.jPlayer('play');
-        else if (audioSettings.enableMusic) this.startPlaying(this.playlist, true);
-    }
+    //functions built in with startPlaying
+    const initPlayer = (id, audioType) => {
+      var $div = $(`<div id="${audioType}-${id}" class="jplayer ${audioType}"></div>`);
+      $div.jPlayer({
+        volume: this.preferences.muted
+          ? 0
+          : this.preferences[audioType === 'music' ? 'music' : 'narration'] / 100,
+        swfPath: `${document.baseURI}jplayer`,
+        preload: 'auto',
+        ended: function () {
+          if (audioType === 'voice') {
+            setTimeout(() => {
+              playNext();
+            }, 50);
+          } else {
+            playNext();
+          }
+        },
+      });
+      this.$players.append($div);
+      this.guardPlayerPlayback($div.data('jPlayer').htmlElement.audio);
+      return $div;
+    };
+    var $player = initPlayer('p1', audioType);
+    var $preloader = initPlayer('p2', audioType);
 
-    playCC(vl) {
-        if(vl){
-            this.startPlaying(this.vocallocal.cc, false);
-        } else{
-            this.startPlaying(['narrations/Your_current_conditions.mp3'], false)
-        }
-    }
+    const playNext = () => {
+      current = getNextIndex();
 
-    playRadar(){
-        this.startPlaying([`/vocallocal/doppler/LRADAR_DEFAULT${Math.floor(Math.random()) + 1}.wav`], false)
-    }
+      if (getNextIndex() === null) {
+        $preloader.off($.jPlayer.event.ended).on($.jPlayer.event.ended, () => {
+          $player.jPlayer('destroy').remove();
+          $preloader.jPlayer('destroy').remove();
+          this.applyVolumes();
+        });
+        switchAudio();
+      } else {
+        switchAudio();
+        preloadTrack(arr[getNextIndex()]);
+      }
+    };
 
-    playBulletin(){
-        this.startPlaying(this.vocallocal.bl, false)
-    }
+    const preloadTrack = (trackName) => {
+      try {
+        $preloader.jPlayer('setMedia', { mp3: trackName }).jPlayer('load');
+      } catch (e) {
+        setTimeout(() => preloadTrack(trackName), 500);
+      }
+    };
 
-    playLF() {
-        this.startPlaying(this.vocallocal.lf, false)
-    }
+    const getNextIndex = () => {
+      const nextIndex = current + 1;
+      if (nextIndex < len) {
+        return nextIndex;
+      } else {
+        return loop ? 0 : null;
+      }
+    };
 
-    playEF() {
-        this.startPlaying([`/vocallocal/weekahead/7DAY_DEFAULT${Math.floor(Math.random() * 3)+1}.wav`], false)
-    }
+    const switchAudio = () => {
+      var tempAudio = $player;
+      var tempAudio2 = $preloader;
+      (($player = null), ($preloader = null));
+      $player = tempAudio2;
+      $preloader = tempAudio;
+      $preloader.removeClass('is-playing');
+      $player.addClass('is-playing');
+      this.applyVolumes();
+      const offset = audioType == 'music' ? Math.abs(audioSettings.offset) : 0;
+      if (offset) $player.jPlayer('play', offset);
+      else $player.jPlayer('play');
+    };
 
-    playSevere(name){
-        if(name == "Flash Flood Warning"){
-            this.startPlaying(['/vocallocal/beep.wav', '/vocallocal/FFLOOD_DEFAULT.wav', '/vocallocal/beep.wav'], false);
-        } else if(name == "Tornado Warning"){
-            this.startPlaying(['/vocallocal/beep.wav', '/vocallocal/TORNADO_DEFAULT.wav', '/vocallocal/beep.wav'], false);
-        } else if(name == "Severe Thunderstorm Warning"){
-            this.startPlaying(['/vocallocal/beep.wav', '/vocallocal/TSTORM_DEFAULT.wav', '/vocallocal/beep.wav'], false);
-        } else {
-            this.startPlaying(['/vocallocal/beep.wav','/vocallocal/beep.wav','/vocallocal/beep.wav','/vocallocal/beep.wav'], false);
-        }
-    }
+    $preloader.jPlayer('setMedia', { mp3: arr[0] });
+    playNext();
+  }
 
-    buildPlaylist() {
-        this.playlist = []
-        var musicPath = 'music/';
-        for(var i = 0; i < audioSettings.order.length; i++){
-            this.playlist.push(`${musicPath}${audioSettings.order[i]}.mp3`);
-        }
-    }
-
-    startPlaying(arr, loop) {
-        if (!this.soundEnabled || !arr.length) return;
-        var audioType = loop ? 'music' : 'voice'
-        if (this.$players.find(`.${audioType}`).length > 0) return;
-
-        var current = -1
-        const len = arr.length;
-
-        //functions built in with startPlaying
-        const initPlayer = (id, audioType) => {
-            var $div = $(`<div id="${id}" class="jplayer ${audioType}"></div>`);
-            $div.jPlayer({
-                swfPath: `${document.baseURI}jplayer`,
-                preload: 'auto',
-                ended: function() {
-                    if(audioType === "voice"){
-                        setTimeout(() => {
-                            playNext();
-                        }, 50);
-                    } else {
-                        playNext()
-                    }
-                }
-            });
-            this.$players.append($div);
-            // jPlayer predates play() promises. Handle browser policy failures
-            // on our own players without logging media URLs or rejected promises.
-            const media = $div.data('jPlayer').htmlElement.audio;
-            const nativePlay = media.play.bind(media);
-            media.play = () => {
-                const handleFailure = (error) => {
-                    if (error.name === 'NotAllowedError') {
-                        this.soundEnabled = false;
-                        this.showSoundPrompt();
-                    } else if (error.name !== 'AbortError') {
-                        console.warn('[Boone audio] Unable to play audio');
-                    }
-                };
-                try {
-                    const playing = nativePlay();
-                    if (playing && playing.catch) return playing.catch(handleFailure);
-                    return playing;
-                } catch (error) { handleFailure(error); }
-            };
-            return $div;
-        }
-        var $player = initPlayer('p1', audioType)
-        var $preloader = initPlayer('p2', audioType)
-
-        const playNext = () => {
-            current = getNextIndex();
-
-            if (getNextIndex() === null) {
-                $preloader.off($.jPlayer.event.ended).on($.jPlayer.event.ended, () => {
-                    this.$players.find('.music').jPlayer('volume', 0.8);
-                    $player.remove();
-                    $preloader.remove();
-                });
-                switchAudio();
-            } else {
-                switchAudio();
-                preloadTrack(arr[getNextIndex()]);
-            }
-        };
-
-        const preloadTrack = (trackName) => {
-            try {
-                $preloader.jPlayer('setMedia', { mp3: trackName }).jPlayer('load');
-            } catch (e) {
-                setTimeout(() => preloadTrack(trackName), 500);
-            }
-        };
-
-        const getNextIndex = () => {
-            const nextIndex = current + 1;
-            if (nextIndex < len) { return nextIndex; }
-            else { return (loop ? 0 : null) }
-        };
-
-        const switchAudio = () => {
-            var tempAudio = $player;
-            var tempAudio2 = $preloader;
-            $player = null, $preloader = null;
-            $player = tempAudio2;
-            $preloader = tempAudio;
-            $preloader.removeClass('is-playing');
-            $player.addClass('is-playing');
-            const offset = audioType == 'music' ? Math.abs(audioSettings.offset) : 0;
-            if (offset) $player.jPlayer('play', offset);
-            else $player.jPlayer('play');
-
-            // $(document).one('mousedown', () => {
-            //     if (!this.isMobile) {
-            //         $player.jPlayer('play', audioType == 'music' ? Math.abs(audioSettings.offset) : 0);
-            //         this.isMobile = true;
-            //     }
-            // });
-
-        };
-
-        //initalizing players
-        if (audioType != 'music') {
-            this.$players.find('.music').jPlayer('volume', 0.3);
-        }
-
-        this.playCallback = {}
-        $preloader.jPlayer('setMedia', { mp3: arr[0] });
-        playNext();
-    }
-
-    stopPlaying() {
-        this.$players.find('.music').jPlayer('volume', 0);
-    }
+  stopPlaying() {
+    this.$players.find('.music').jPlayer('volume', 0);
+  }
 }
 
 var audioPlayer = new AudioManager();

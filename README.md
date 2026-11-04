@@ -1,19 +1,26 @@
 # Boone IntelliSTAR
 
-A Boone, North Carolina customization of [Mist Weather Media's IntelliStar Simulator](https://github.com/MistWeatherMedia/intellistar-1), a recreation of The Weather Channel's Local on the 8s in HTML, CSS, and JavaScript.
+A weather viewer defaulting to Boone, North Carolina, based on a customization of [Mist Weather Media's IntelliStar Simulator](https://github.com/MistWeatherMedia/intellistar-1), a recreation of The Weather Channel's Local on the 8s in HTML, CSS, and JavaScript.
 
 ## What changed in this fork
 
-- Weather is fixed to Boone, NC; IP location detection and nearby-city discovery are removed.
+- Boone, NC is the default. Viewers can search for another town/city, save their choice in their own browser, or return to Boone with one button. IP location detection is removed.
 - Slides start automatically with an animated **Loading Boone weather…** screen instead of the settings screen.
-- Slides loop without reloading the page. Weather requests finish before startup and refresh at the end of each cycle.
-- Regional current/forecast map slides are omitted to keep the forecast focused on Boone. Radar slides are optional and remain hidden during preloading until their slide begins.
+- Slides loop without reloading the page. Weather requests finish before startup and refresh in the background at the end of each cycle. Failed requests reuse available data and retry automatically.
+- Regional current/forecast map slides are omitted to keep the forecast focused on the selected city. Radar slides are optional and remain hidden during preloading until their slide begins.
 - Weather and radar data requests go through Express. Private credentials stay on the server.
 - Failed optional fonts and images produce warnings and allow startup to continue with available assets and fallback fonts.
-- Express logs startup, viewer starts, slide changes/cycle refreshes, and weather diagnostics; routine asset/image and radar tile requests are suppressed.
 - A production build minifies JavaScript and CSS while preserving shared browser globals and license notices.
 
 See [changelog.txt](changelog.txt) for the fork changes and original release history.
+
+## Viewer controls
+
+Small gear (**Settings**) and info (**About**) icons sit in the bottom-right corner. They fade away after three seconds of inactivity and reappear when you move the pointer, tap, or use the keyboard. City selection, weather freshness, and sound controls stay hidden until you open Settings. About credits the original IntelliStar Simulator by Mist Weather Media and links to the upstream project and [this fork on GitHub](https://github.com/high-country-web/weather). A successful complete refresh updates the displayed time; offline status, incomplete updates, and old observations are marked. Weather data is retained in memory for the current visit, so reopening offline still requires a connection before fresh weather is available. Alerts are not replayed from the weather cache.
+
+Open **Settings** to search by town/city, state, or country. Picking a result restarts the viewer with weather and radar centered on that place; normal slide cycles never reload. **Use Boone, NC** restores the default. City search uses the existing private Weather.com key; available locations and weather products depend on the provider's coverage and your key's access.
+
+The **Sound** section in Settings has separate music and narration volume sliders and a mute button. Choices are saved locally when browser storage is available. Returning viewers who previously enabled sound get an automatic playback attempt; if the browser blocks it, **Enable sound** requests a click/tap again. Choosing **Continue without sound** is remembered. Music lowers during narration and returns to the chosen level afterward.
 
 ## Requirements and setup
 
@@ -39,7 +46,7 @@ Never commit `.env`, put private keys in `webroot`, or include them in public bu
 
 The Mapbox token is intentionally delivered to the browser. Use a public `pk.*` token with allowed-URL restrictions; private tokens are not returned. If the public token is absent or invalid, radar slides are skipped.
 
-The weather proxy allows specific upstream paths and parameters, fixes forecast coordinates to Boone, times out stalled requests, and returns generic errors without upstream credentials or diagnostics.
+The weather proxy allows specific upstream paths and parameters, validates selected coordinates (defaulting to Boone), times out stalled requests, and returns generic errors without upstream credentials or diagnostics.
 
 ## Production build
 
@@ -72,10 +79,14 @@ Server logs exclude query strings, headers, response bodies, raw upstream errors
 
 - **Missing weather configuration:** set `WEATHER_API_KEY` in the private `.env` or hosting environment, then restart Express.
 - **Production assets missing:** run `npm run build` before starting in production mode.
-- **Weather unavailable:** check the Express terminal for the upstream status or timeout; the next slide cycle retries weather requests.
+- **Weather unavailable:** check the Express terminal for the upstream status or timeout; available weather stays on screen while requests retry after 15 seconds, then 30 seconds, up to a maximum two-minute delay. Reconnecting also triggers a refresh.
 - **Font warnings:** a successful HTTP response means Express served the file; the browser may still reject its font data. Startup continues with fallback fonts.
 - **Mobile startup:** phones/tablets skip the desktop radar stack, which allocates eight WebGL maps. Weather slides continue; the Express console records `radar disabled (mobile)`. Browsers without supported WebGL also skip radar, and map initialization errors fall back to weather slides. This reduces a likely source of graphics-memory crashes; physical-device validation is still needed.
 - **No sound:** browser autoplay rules may require a user interaction before audio can play.
+
+## Code formatting
+
+Run `npm run format` to format the application source, or `npm run format:check` to check it without changing files. The shared Prettier configuration uses two-space indentation, single quotes in JavaScript, and consistent line wrapping. Vendor libraries and generated production files are excluded.
 
 ## Original project and credits
 
