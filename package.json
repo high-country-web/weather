@@ -2,8 +2,8 @@
   "name": "intellistar-1",
   "description": "Intellistar 1 Domestic HTML",
   "scripts": {
-    "format": "prettier --write app.js \"scripts/**/*.js\" \"webroot/*.html\" \"webroot/*.css\" \"webroot/css/*.css\" \"webroot/js/*.js\"",
-    "format:check": "prettier --check app.js \"scripts/**/*.js\" \"webroot/*.html\" \"webroot/*.css\" \"webroot/css/*.css\" \"webroot/js/*.js\"",
+    "format": "prettier --write app.js \"scripts/**/*.js\" \"webroot/*.html\" \"webroot/*.css\" \"webroot/css/*.css\" \"webroot/js/*.js\" \"webroot/hub/*.{html,css,js}\"",
+    "format:check": "prettier --check app.js \"scripts/**/*.js\" \"webroot/*.html\" \"webroot/*.css\" \"webroot/css/*.css\" \"webroot/js/*.js\" \"webroot/hub/*.{html,css,js}\"",
     "start": "node app.js",
     "build": "node scripts/build.js",
     "start:prod": "node app.js --production"

@@ -1,9 +1,26 @@
-# Boone IntelliSTAR
+# High Country Weather
 
-A weather viewer defaulting to Boone, North Carolina, based on a customization of [Mist Weather Media's IntelliStar Simulator](https://github.com/MistWeatherMedia/intellistar-1), a recreation of The Weather Channel's Local on the 8s in HTML, CSS, and JavaScript.
+High Country Weather brings together **the original simulator work of [Mist Weather Media](https://github.com/MistWeatherMedia)** in one place. The players, their visual designs, animations, and original simulator implementations were created by Mist Weather Media and its contributors. This project builds on their work with a shared player-selection home page, individual player URLs, and local-weather customizations defaulting to Boone, North Carolina.
+
+## Original simulators
+
+All five players originate from the Mist Weather Media organization:
+
+| Player | Local path | Original source |
+| --- | --- | --- |
+| IntelliStar 1 | `/intellistar-1` | [MistWeatherMedia/intellistar-1](https://github.com/MistWeatherMedia/intellistar-1) |
+| WeatherSTAR XL | `/weatherstar-xl` | [MistWeatherMedia/weatherstar-xl](https://github.com/MistWeatherMedia/weatherstar-xl) |
+| Weatherscan Local | `/weatherscan-local` | [MistWeatherMedia/weatherscan-local](https://github.com/MistWeatherMedia/weatherscan-local) |
+| Weatherscan v1 | `/weatherscan-v1` | [MistWeatherMedia/weatherscan-v1](https://github.com/MistWeatherMedia/weatherscan-v1) |
+| Weatherscan v2 | `/weatherscan-v2` | [MistWeatherMedia/weatherscan-v2](https://github.com/MistWeatherMedia/weatherscan-v2) |
+
+The root URL (`/`) opens the player gallery. The original IntelliStar viewer lives at `/intellistar-1`; its existing settings and sound controls remain available. The additional players retain their original graphics and run local forecast lineups through the shared Express weather service. Their optional radar, traffic, regional packages, music, and narration are not enabled by the shared adapter yet. Choose a city from the home page to use it across players. Imported player directories include their upstream revision and license in `UPSTREAM.md` and `LICENSE`.
+
+This collection does not claim authorship of the original simulators and is not affiliated with The Weather Channel.
 
 ## What changed in this fork
 
+- A shared High Country Weather gallery brings together the five Mist Weather Media players, with screenshot previews and a dedicated URL for each. City selection is shared across players on the same device.
 - Boone, NC is the default. Viewers can search for another town/city, save their choice in their own browser, or return to Boone with one button. IP location detection is removed.
 - Slides start automatically with an animated **Loading Boone weather…** screen instead of the settings screen.
 - Slides loop without reloading the page. Weather requests finish before startup and refresh in the background at the end of each cycle. Failed requests reuse available data and retry automatically.

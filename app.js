@@ -17,6 +17,13 @@ if (
   );
 }
 const app = express();
+const playerSlugs = [
+  'intellistar-1',
+  'weatherstar-xl',
+  'weatherscan-local',
+  'weatherscan-v1',
+  'weatherscan-v2',
+];
 // Log paths and status only: query strings, headers, bodies, and error objects
 // can contain credentials and must never be written to the terminal.
 function serverLog(level, message) {
@@ -35,7 +42,10 @@ app.use((req, res, next) => {
   if (
     pathname.startsWith('/api/weather/v3/TileServer/') ||
     pathname === '/api/view-events' ||
-    (pathname !== '/' && pathname !== '/index.html' && !pathname.startsWith('/api/'))
+    (pathname !== '/' &&
+      pathname !== '/index.html' &&
+      !playerSlugs.some((slug) => pathname === `/${slug}` || pathname === `/${slug}/`) &&
+      !pathname.startsWith('/api/'))
   )
     return next();
   const category = pathname.startsWith('/api/weather')
@@ -59,6 +69,9 @@ const allowedPaths = new Set([
   '/v3/location/search',
   '/v3/wx/observations/current',
   '/v3/wx/forecast/daily/7day',
+  '/v3/wx/forecast/daily/3day',
+  '/v3/wx/forecast/daily/5day',
+  '/v3/wx/almanac/daily/5day',
   '/v3/wx/forecast/hourly/1day',
   '/v3/wx/forecast/hourly/2day',
   '/v3/wx/globalAirQuality',
@@ -96,10 +109,16 @@ const slideNames = new Set([
   'almanac',
   'bulletin',
   'outdoorActivity',
+  'upNext',
+  'cityIntro',
+  'extendedForecast',
+  'dayPart',
+  'dayDesc',
 ]);
 // Only bounded, known fields can reach logs; never log client-supplied text.
 app.post('/api/view-events', express.json({ limit: '1kb' }), (req, res) => {
-  const { viewId, event, slide, position, total } = req.body || {};
+  const { viewId, event, slide, position, total, player } = req.body || {};
+  const playerLabel = playerSlugs.includes(player) ? ` (${player})` : '';
   if (
     typeof viewId !== 'string' ||
     !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(viewId)
@@ -114,7 +133,7 @@ app.post('/api/view-events', express.json({ limit: '1kb' }), (req, res) => {
     position <= total &&
     total <= 100
   ) {
-    serverLog('info', `[Boone slides] View ${viewId}: ${position}/${total} ${slide}`);
+    serverLog('info', `[Boone slides] View ${viewId}${playerLabel}: ${position}/${total} ${slide}`);
   } else if (
     event === 'radar-disabled' &&
     ['mobile', 'unsupported', 'no-token', 'initialization-failed'].includes(slide)
@@ -124,7 +143,10 @@ app.post('/api/view-events', express.json({ limit: '1kb' }), (req, res) => {
       `[Boone viewer] View ${viewId}: radar disabled (${slide}); using weather slides`,
     );
   } else if (event === 'cycle') {
-    serverLog('info', `[Boone slides] View ${viewId}: cycle complete; refreshing weather`);
+    serverLog(
+      'info',
+      `[Boone slides] View ${viewId}${playerLabel}: cycle complete; refreshing weather`,
+    );
   } else return res.sendStatus(400);
   res.sendStatus(204);
 });
@@ -222,7 +244,17 @@ app.use('/api/weather', async (req, res) => {
     res.status(502).json({ error: 'Weather service unavailable' });
   }
 });
-app.use(express.static(publicRoot, { dotfiles: 'deny' }));
+app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(publicRoot, 'hub/index.html')));
+for (const slug of playerSlugs) {
+  const directory = slug === 'intellistar-1' ? publicRoot : path.join(publicRoot, 'players', slug);
+  // An explicit base in each document keeps relative image, font, and audio paths
+  // valid with or without a trailing slash, including bookmarked player links.
+  app.get([`/${slug}`, `/${slug}/`], (req, res) =>
+    res.sendFile(path.join(directory, 'index.html')),
+  );
+  app.use(`/${slug}`, express.static(directory, { dotfiles: 'deny', index: false }));
+}
+app.use(express.static(publicRoot, { dotfiles: 'deny', index: false }));
 if (require.main === module) {
   const port = Number(process.env.PORT || 8080);
   serverLog(

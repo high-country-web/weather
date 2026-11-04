@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Your local forecast, with a little nostalgia. Choose from five classic weather players, starting with Boone, North Carolina."
+    />
+    <title>High Country Weather · Choose your player</title>
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="stylesheet" href="/hub/home.css" />
+    <script defer src="/hub/home.js"></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="/" aria-label="High Country Weather home"
+        ><svg viewBox="0 0 48 38" aria-hidden="true">
+          <path d="M2 32 18 8l9 14 6-9 13 19M11 32l9-13 5 8" /></svg
+        ><span>HIGH COUNTRY<span class="brand-weather">WEATHER</span></span></a
+      >
+      <span class="masthead-note">A local forecast. A familiar feeling.</span>
+    </header>
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow"><span></span> YOUR WEATHER, THROUGH THE YEARS</p>
+          <h1>The forecast.<br />A little more <em>nostalgic.</em></h1>
+          <p class="lede">
+            Settle in with the weather you remember. Pick a classic player and let your local
+            forecast roll.
+          </p>
+        </div>
+        <aside class="location-box" aria-label="Forecast location">
+          <p class="eyebrow">TUNED TO</p>
+          <h2 id="city-label">Boone, NC</h2>
+          <p>One city. Every player.</p>
+          <button id="change-city" type="button">
+            Change location <span aria-hidden="true">↗</span>
+          </button>
+        </aside>
+      </section>
+      <section aria-labelledby="players-title" class="collection">
+        <div class="section-heading">
+          <h2 id="players-title">Choose your player</h2>
+          <span>FIVE WAYS TO WATCH</span>
+        </div>
+        <div class="players">
+          <article class="player-card">
+            <a class="preview" href="/intellistar-1" aria-label="Watch IntelliStar 1"
+              ><img
+                src="/hub/previews/intellistar-1.jpg"
+                alt="IntelliStar 1 current conditions screen"
+                width="800"
+                height="600"
+              /><span class="preview-tag">LOCAL ON THE 8s</span></a
+            >
+            <div class="card-copy">
+              <p class="card-number">01 <span>THE FAMILIAR FAVORITE</span></p>
+              <h3>IntelliStar 1</h3>
+              <p>Rich blue skies, familiar graphics, and the classic local forecast experience.</p>
+              <a class="watch" href="/intellistar-1"
+                >Watch IntelliStar 1 <span aria-hidden="true">▶</span></a
+              >
+            </div>
+          </article>
+          <article class="player-card">
+            <a class="preview" href="/weatherstar-xl" aria-label="Watch WeatherSTAR XL"
+              ><img
+                src="/hub/previews/weatherstar-xl.jpg"
+                alt="WeatherSTAR XL current conditions screen"
+                width="800"
+                height="600"
+              /><span class="preview-tag">LOCAL ON THE 8s</span></a
+            >
+            <div class="card-copy">
+              <p class="card-number">02 <span>A CLASSIC GENERATION</span></p>
+              <h3>WeatherSTAR XL</h3>
+              <p>A throwback to bold type, warm colors, and turn-of-the-century weather.</p>
+              <a class="watch" href="/weatherstar-xl"
+                >Watch WeatherSTAR XL <span aria-hidden="true">▶</span></a
+              >
+            </div>
+          </article>
+          <article class="player-card">
+            <a class="preview" href="/weatherscan-local" aria-label="Watch Weatherscan Local"
+              ><img
+                src="/hub/previews/weatherscan-local.jpg"
+                alt="Weatherscan Local forecast screen"
+                width="800"
+                height="600"
+              /><span class="preview-tag">WEATHERSCAN</span></a
+            >
+            <div class="card-copy">
+              <p class="card-number">03 <span>THE EARLY DAYS</span></p>
+              <h3>Weatherscan Local</h3>
+              <p>
+                The early Weatherscan look. A simple, unhurried way to keep up with your weather.
+              </p>
+              <a class="watch" href="/weatherscan-local"
+                >Watch Weatherscan Local <span aria-hidden="true">▶</span></a
+              >
+            </div>
+          </article>
+          <article class="player-card">
+            <a class="preview" href="/weatherscan-v1" aria-label="Watch Weatherscan v1"
+              ><img
+                loading="lazy"
+                src="/hub/previews/weatherscan-v1.jpg"
+                alt="Weatherscan v1 local weather screen"
+                width="800"
+                height="600"
+              /><span class="preview-tag">2003–2005</span></a
+            >
+            <div class="card-copy">
+              <p class="card-number">04 <span>AN EARLY 2000s FAVORITE</span></p>
+              <h3>Weatherscan v1</h3>
+              <p>Flowing curves and the unmistakable look of the first IntelliStar Weatherscan.</p>
+              <a class="watch" href="/weatherscan-v1"
+                >Watch Weatherscan v1 <span aria-hidden="true">▶</span></a
+              >
+            </div>
+          </article>
+          <article class="player-card">
+            <a class="preview" href="/weatherscan-v2" aria-label="Watch Weatherscan v2"
+              ><img
+                loading="lazy"
+                src="/hub/previews/weatherscan-v2.jpg"
+                alt="Weatherscan v2 local weather screen"
+                width="800"
+                height="600"
+              /><span class="preview-tag">2005–2022</span></a
+            >
+            <div class="card-copy">
+              <p class="card-number">05 <span>THE LONGTIME COMPANION</span></p>
+              <h3>Weatherscan v2</h3>
+              <p>The enduring Weatherscan style, with your forecast always close at hand.</p>
+              <a class="watch" href="/weatherscan-v2"
+                >Watch Weatherscan v2 <span aria-hidden="true">▶</span></a
+              >
+            </div>
+          </article>
+        </div>
+      </section>
+      <div class="closing">
+        <svg viewBox="0 0 160 35" aria-hidden="true">
+          <path d="m0 34 29-22 14 11 27-21 30 26 13-12 47 18" />
+        </svg>
+        <p>Made for the High Country.<br /><span>At home wherever you are.</span></p>
+        <p class="location-note">
+          Starts in Boone, North Carolina.<br />Your location is remembered on this device.
+        </p>
+      </div>
+    </main>
+    <footer>
+      <span>HIGH COUNTRY WEB <span class="footer-dot">/</span> WEATHER</span>
+      <p>
+        Simulators by <a href="https://github.com/MistWeatherMedia">Mist Weather Media</a> ·
+        <a href="https://github.com/high-country-web/weather">Source & credits</a>
+      </p>
+      <small>An independent project. Not affiliated with The Weather Channel.</small>
+    </footer>
+    <dialog id="city-dialog" aria-labelledby="city-dialog-title">
+      <form method="dialog">
+        <button class="close" aria-label="Close location search">×</button>
+      </form>
+      <p class="eyebrow">MAKE YOURSELF AT HOME</p>
+      <h2 id="city-dialog-title">Where are you watching?</h2>
+      <form id="city-search">
+        <label for="city-query">Town or city</label>
+        <div class="search-row">
+          <input
+            id="city-query"
+            name="query"
+            type="search"
+            placeholder="e.g. Boone, NC"
+            required
+            minlength="2"
+            maxlength="100"
+            autocomplete="off"
+          /><button type="submit">Search</button>
+        </div>
+      </form>
+      <p id="search-status" role="status"></p>
+      <div id="city-results"></div>
+      <button id="use-boone" type="button">Use Boone, NC</button>
+    </dialog>
+  </body>
+</html>

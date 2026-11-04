@@ -1,8 +1,31 @@
 <!doctype html>
 <html>
   <head>
+    <base href="/intellistar-1/" />
+    <style>
+      #player-home {
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 100000;
+        padding: 8px 12px;
+        color: white;
+        background: #081c30dd;
+        border: 1px solid #ffffff40;
+        border-radius: 6px;
+        font:
+          14px system-ui,
+          sans-serif;
+        text-decoration: none;
+        opacity: 0.35;
+      }
+      #player-home:hover,
+      #player-home:focus-visible {
+        opacity: 1;
+      }
+    </style>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>IntelliStar Simulator</title>
+    <title>IntelliStar 1 · High Country Weather</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="stylesheet" href="main.css" />
@@ -75,6 +98,7 @@
   </head>
 
   <body>
+    <a id="player-home" href="/">‹ Players &amp; city</a>
     <section id="audio-permission" aria-label="Weather audio" hidden>
       <p>Enable weather audio?</p>
       <p>Allow music and narration by selecting Enable sound.</p>
