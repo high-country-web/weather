@@ -74,17 +74,118 @@ var weatherInfo = {
   monthlyPrecip: '',
 };
 
-// Settle after success or failure handlers finish so slide cycles can retry
-// unavailable data without propagating a rejected jqXHR into startup.
-function requestWeather(url, onSuccess, onFailure) {
-  return new Promise((resolve) => {
-    const request = $.getJSON(url, onSuccess);
-    if (onFailure) request.fail(onFailure);
-    request.always(() => resolve());
-  });
+const WEATHER_RETRY_DELAY = 15_000;
+const WEATHER_MAX_RETRY_DELAY = 120_000;
+const WEATHER_STALE_AFTER = 15 * 60_000;
+const OBSERVATION_STALE_AFTER = 30 * 60_000;
+
+var weatherResponseCache = new Map();
+var weatherRefresh = {
+  pending: null,
+  failed: false,
+  lastUpdated: null,
+  retryTimer: null,
+  retryDelay: WEATHER_RETRY_DELAY,
+};
+
+// Cache only weather payloads already returned by our server, never credentials.
+// A failed request reuses its last valid response; alert failures clear alerts instead.
+function weatherJSON(url, callback, state = window.weatherInfo) {
+  const result = $.Deferred();
+  const cacheable = !url.includes('/alerts/');
+  const apply = (data) => {
+    const previous = structuredClone(state);
+    try {
+      callback(structuredClone(data));
+    } catch (error) {
+      Object.assign(state, previous);
+      throw error;
+    }
+  };
+  const failed = () => {
+    weatherRefresh.failed = true;
+    if (cacheable && weatherResponseCache.has(url)) {
+      try {
+        apply(weatherResponseCache.get(url));
+        result.resolve();
+        return;
+      } catch (_) {
+        /* Let the existing unavailable-data fallback run. */
+      }
+    }
+    result.reject();
+  };
+  $.getJSON(url)
+    .done((data) => {
+      try {
+        apply(data);
+        if (cacheable) weatherResponseCache.set(url, structuredClone(data));
+        result.resolve();
+      } catch (_) {
+        failed();
+      }
+    })
+    .fail(failed);
+  return result.promise();
 }
 
-async function grabData() {
+function grabData() {
+  if (weatherRefresh.pending) return weatherRefresh.pending;
+  clearTimeout(weatherRefresh.retryTimer);
+  weatherRefresh.failed = false;
+  weatherRefresh.pending = refreshWeatherData()
+    .catch(() => {
+      weatherRefresh.failed = true;
+      console.warn('[Boone weather] Refresh interrupted; retaining available weather');
+    })
+    .finally(finishWeatherRefresh);
+  updateWeatherStatus();
+  return weatherRefresh.pending;
+}
+
+function finishWeatherRefresh() {
+  weatherRefresh.pending = null;
+
+  if (weatherRefresh.failed) {
+    weatherRefresh.retryTimer = setTimeout(grabData, weatherRefresh.retryDelay);
+    weatherRefresh.retryDelay = Math.min(weatherRefresh.retryDelay * 2, WEATHER_MAX_RETRY_DELAY);
+    console.warn('[Boone weather] Some data unavailable; automatic retry scheduled');
+  } else {
+    weatherRefresh.lastUpdated = Date.now();
+    weatherRefresh.retryDelay = WEATHER_RETRY_DELAY;
+  }
+
+  updateWeatherStatus();
+}
+
+function updateWeatherStatus() {
+  const status = document.getElementById('weather-status');
+  if (!status) return;
+  const time = weatherRefresh.lastUpdated;
+  const stale = !time || Date.now() - time > WEATHER_STALE_AFTER;
+  const offline = navigator.onLine === false;
+  const observed = weatherInfo.currentConditions.observedAt;
+  const observationStale = Boolean(observed && Date.now() - observed > OBSERVATION_STALE_AFTER);
+  let label = time
+    ? `Updated ${new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+    : 'Waiting for current weather';
+  if (offline) label += ' - Offline; showing available weather';
+  else if (weatherRefresh.failed) label += ' - Some data unavailable; retrying';
+  else if (stale && time) label += ' - Weather may be out of date';
+  else if (weatherRefresh.pending) label += ' - Updating...';
+  if (observationStale) label += ' - Current observation is over 30 minutes old';
+  status.textContent = label;
+  status.dataset.warning = String(stale || weatherRefresh.failed || offline || observationStale);
+}
+window.addEventListener('online', () => {
+  grabData();
+});
+window.addEventListener('offline', updateWeatherStatus);
+setInterval(updateWeatherStatus, 30000);
+
+async function refreshWeatherData() {
+  // Build the next cycle separately so slides keep reading a complete snapshot.
+  const weatherInfo = structuredClone(window.weatherInfo);
   $('#startbutton').css('opacity', '0.5');
   $('#startbutton').css('pointer-events', 'none');
   weatherInfo.almanac.days = [];
@@ -99,66 +200,76 @@ async function grabData() {
   weatherInfo.daypartForecast.noReport = false;
   weatherInfo.outdoorActivity.noReport = false;
   await Promise.all([
-    grabCC(),
-    grabLocalForecast(),
-    grabMonthlyPrecip(),
-    grabAirQuality(),
-    grabAlmanac(),
-    grabDaypartForecast(),
-    grabOutdoorActivityData(),
-    grabAlerts(),
+    grabCC(weatherInfo),
+    grabLocalForecast(weatherInfo),
+    grabMonthlyPrecip(weatherInfo),
+    grabAirQuality(weatherInfo),
+    grabAlmanac(weatherInfo),
+    grabDaypartForecast(weatherInfo),
+    grabOutdoorActivityData(weatherInfo),
+    grabAlerts(weatherInfo),
   ]);
+  window.weatherInfo = weatherInfo;
+  if (!weatherInfo.bulletin.crawlAlert.enabled) endAlertCrawl();
+  else if (weatherInfo.bulletin.crawlAlert.alert) {
+    $('.ldl-black .alertinfo .alertcrawl').marquee('destroy').off('finished');
+    startAlertCrawl();
+  }
   console.info(`[Boone weather] Refresh complete in ${Date.now() - now}ms`);
-  slideFlavor = flavorPicker(slideSettings.flavor, {
-    bulletin: weatherInfo.specialModes.bulletin,
-    precip: weatherInfo.specialModes.precip,
+  // Keep the configured slide order stable while background refreshes finish.
+}
+async function grabCC(weatherInfo = window.weatherInfo) {
+  await new Promise((resolve) => {
+    weatherJSON(
+      '/api/weather/v3/wx/observations/current?geocode=' +
+        locationConfig.mainCity.lat +
+        ',' +
+        locationConfig.mainCity.lon +
+        '&units=e&language=en-US&format=json',
+      function (data) {
+        weatherInfo.currentConditions.cond = data.wxPhraseLong
+          .replace('Showers in the Vicinity', 'Showers Nearby')
+          .replace('/Wind', ', Windy')
+          .replace('Thunder in the Vicinity', 'Thunder');
+        weatherInfo.currentConditions.gusts =
+          data.windGust != null || data.windGust != undefined ? data.windGust : 'None';
+        weatherInfo.currentConditions.humidity = data.relativeHumidity + '%';
+        weatherInfo.currentConditions.icon = data.iconCodeExtend;
+        weatherInfo.currentConditions.pressure.trend = data.pressureTendencyTrend;
+        weatherInfo.currentConditions.pressure.val = data.pressureAltimeter.toFixed(2);
+        weatherInfo.currentConditions.temp = data.temperature;
+        weatherInfo.currentConditions.dewpoint = data.temperatureDewPoint;
+        weatherInfo.currentConditions.wind =
+          data.windDirectionCardinal == 'CALM' ||
+          data.windSpeed == 0 ||
+          data.windDirectionCardinal == undefined
+            ? 'Calm'
+            : data.windDirectionCardinal + ' ' + data.windSpeed;
+        weatherInfo.currentConditions.visibility = data.visibility;
+        weatherInfo.currentConditions.noReport = false;
+        weatherInfo.currentConditions.observedAt = Number.isFinite(data.validTimeUtc)
+          ? data.validTimeUtc * 1000
+          : null;
+
+        if (data.temperatureHeatIndex > data.temperature + 3) {
+          weatherInfo.currentConditions.feelslike.type = 'Heat Index';
+          weatherInfo.currentConditions.feelslike.val = data.temperatureHeatIndex;
+        } else if (data.temperatureWindChill < data.temperature - 3) {
+          weatherInfo.currentConditions.feelslike.type = 'Wind Chill';
+          weatherInfo.currentConditions.feelslike.val = data.temperatureWindChill;
+        } else {
+          weatherInfo.currentConditions.feelslike.type = null;
+        }
+      },
+      weatherInfo,
+    )
+      .fail(function () {
+        weatherInfo.currentConditions.noReport = true;
+      })
+      .always(() => resolve());
   });
 }
-async function grabCC() {
-  await requestWeather(
-    '/api/weather/v3/wx/observations/current?geocode=' +
-      locationConfig.mainCity.lat +
-      ',' +
-      locationConfig.mainCity.lon +
-      '&units=e&language=en-US&format=json',
-    function (data) {
-      weatherInfo.currentConditions.cond = data.wxPhraseLong
-        .replace('Showers in the Vicinity', 'Showers Nearby')
-        .replace('/Wind', ', Windy')
-        .replace('Thunder in the Vicinity', 'Thunder');
-      weatherInfo.currentConditions.gusts =
-        data.windGust != null || data.windGust != undefined ? data.windGust : 'None';
-      weatherInfo.currentConditions.humidity = data.relativeHumidity + '%';
-      weatherInfo.currentConditions.icon = data.iconCodeExtend;
-      weatherInfo.currentConditions.pressure.trend = data.pressureTendencyTrend;
-      weatherInfo.currentConditions.pressure.val = data.pressureAltimeter.toFixed(2);
-      weatherInfo.currentConditions.temp = data.temperature;
-      weatherInfo.currentConditions.dewpoint = data.temperatureDewPoint;
-      weatherInfo.currentConditions.wind =
-        data.windDirectionCardinal == 'CALM' ||
-        data.windSpeed == 0 ||
-        data.windDirectionCardinal == undefined
-          ? 'Calm'
-          : data.windDirectionCardinal + ' ' + data.windSpeed;
-      weatherInfo.currentConditions.visibility = data.visibility;
-      weatherInfo.currentConditions.noReport = false;
-
-      if (data.temperatureHeatIndex > data.temperature + 3) {
-        weatherInfo.currentConditions.feelslike.type = 'Heat Index';
-        weatherInfo.currentConditions.feelslike.val = data.temperatureHeatIndex;
-      } else if (data.temperatureWindChill < data.temperature - 3) {
-        weatherInfo.currentConditions.feelslike.type = 'Wind Chill';
-        weatherInfo.currentConditions.feelslike.val = data.temperatureWindChill;
-      } else {
-        weatherInfo.currentConditions.feelslike.type = null;
-      }
-    },
-    function () {
-      weatherInfo.currentConditions.noReport = true;
-    },
-  );
-}
-async function grabNearbyCC() {
+async function grabNearbyCC(weatherInfo = window.weatherInfo) {
   if (locationConfig.eightCities.cities.length == 0) {
     weatherInfo.eightCities.noReport = true;
     return;
@@ -177,42 +288,46 @@ async function grabNearbyCC() {
   }
   url += '&language=en-US&units=e&format=json';
 
-  await requestWeather(
-    url,
-    function (data) {
-      data.forEach((ajaxedLoc, i) => {
-        var eightslideloc = { name: '', temp: '', icon: '', wind: '' };
-        eightslideloc.name = locationConfig.eightCities.cities[i].displayname;
-        eightslideloc.temp = ajaxedLoc['v3-wx-observations-current'].temperature;
-        eightslideloc.icon = ajaxedLoc['v3-wx-observations-current'].iconCodeExtend;
-        eightslideloc.wind = {
-          direction:
-            ajaxedLoc['v3-wx-observations-current'].windSpeed == 0
-              ? 'Calm'
-              : ajaxedLoc['v3-wx-observations-current'].windDirectionCardinal,
-          speed: ajaxedLoc['v3-wx-observations-current'].windSpeed,
-        };
-        weatherInfo.eightCities.cities.push(eightslideloc);
-      });
-    },
-    function () {
-      weatherInfo.eightCities.noReport = true;
-      for (var i = 0; i < 8; i++) {
-        var eightslideNR = {
-          name: !locationConfig.eightCities.cities[i].displayname
-            ? ''
-            : locationConfig.eightCities.cities[i].displayname,
-          temp: '',
-          icon: 4400,
-          wind: '',
-          windspeed: '',
-        };
-        weatherInfo.eightCities.cities.push(eightslideNR);
-      }
-    },
-  );
+  await new Promise((resolve) => {
+    weatherJSON(
+      url,
+      function (data) {
+        data.forEach((ajaxedLoc, i) => {
+          var eightslideloc = { name: '', temp: '', icon: '', wind: '' };
+          eightslideloc.name = locationConfig.eightCities.cities[i].displayname;
+          eightslideloc.temp = ajaxedLoc['v3-wx-observations-current'].temperature;
+          eightslideloc.icon = ajaxedLoc['v3-wx-observations-current'].iconCodeExtend;
+          eightslideloc.wind = {
+            direction:
+              ajaxedLoc['v3-wx-observations-current'].windSpeed == 0
+                ? 'Calm'
+                : ajaxedLoc['v3-wx-observations-current'].windDirectionCardinal,
+            speed: ajaxedLoc['v3-wx-observations-current'].windSpeed,
+          };
+          weatherInfo.eightCities.cities.push(eightslideloc);
+        });
+      },
+      weatherInfo,
+    )
+      .fail(function () {
+        weatherInfo.eightCities.noReport = true;
+        for (var i = 0; i < 8; i++) {
+          var eightslideNR = {
+            name: !locationConfig.eightCities.cities[i].displayname
+              ? ''
+              : locationConfig.eightCities.cities[i].displayname,
+            temp: '',
+            icon: 4400,
+            wind: '',
+            windspeed: '',
+          };
+          weatherInfo.eightCities.cities.push(eightslideNR);
+        }
+      })
+      .always(() => resolve());
+  });
 }
-async function grabLocalForecast() {
+async function grabLocalForecast(weatherInfo = window.weatherInfo) {
   //includes 36 hour forecast and week ahead
   weatherInfo.dayDesc.days = [];
   weatherInfo.weekAhead.days = [];
@@ -223,216 +338,235 @@ async function grabLocalForecast() {
     ',' +
     locationConfig.mainCity.lon +
     '&format=json&units=e&language=en-US';
-  await requestWeather(
-    url,
-    function (data) {
-      var dayOfWeek = {
-        0: 'Monday',
-        1: 'Tuesday',
-        2: 'Wednesday',
-        3: 'Thursday',
-        4: 'Friday',
-        5: 'Saturday',
-        6: 'Sunday',
-      };
-      //36 HOUR
-      for (
-        var i = data.daypart[0].daypartName[0] === null ? 1 : 0;
-        i < (data.daypart[0].daypartName[0] === null ? 5 : 4);
-        i++
-      ) {
-        var dayDescToAdd = {
-          name: data.daypart[0].daypartName[i]
-            .replace(
-              'Tomorrow',
-              dayOfWeek[new Date().getHours() > 3 ? new Date().getDay() : new Date().getDay() - 1],
-            )
-            .replace(' night', ' Night'),
-          desc: data.daypart[0].narrative[i].replaceAll('F. ', '. '),
-          narrQualiCode:
-            data.daypart[0].qualifierCode[i] == null
-              ? ''
-              : data.daypart[0].qualifierCode[i].replace('Q', ''),
-          iconCode: data.daypart[0].iconCodeExtend[i],
-          cond: {
-            name: codetoFcst[data.daypart[0].iconCodeExtend[i]].mov,
-            time: data.daypart[0].daypartName[i].endsWith('night') ? '_night' : '_day',
-          },
+  await new Promise((resolve) => {
+    weatherJSON(
+      url,
+      function (data) {
+        var dayOfWeek = {
+          0: 'Monday',
+          1: 'Tuesday',
+          2: 'Wednesday',
+          3: 'Thursday',
+          4: 'Friday',
+          5: 'Saturday',
+          6: 'Sunday',
         };
-        weatherInfo.dayDesc.days.push(dayDescToAdd);
-      }
-      //7 DAY
-      for (var j = 0; j < 7; j++) {
-        var dayWAtoAdd = { name: '', cond: '', icon: '', high: '', low: '', windspeed: '' };
-        dayWAtoAdd.name = data.dayOfWeek[data.daypart[0].wxPhraseLong[0] === null ? j + 1 : j]
-          .substring(0, 3)
-          .toUpperCase();
-        dayWAtoAdd.cond = data.daypart[0].wxPhraseLong[
-          data.daypart[0].wxPhraseLong[0] === null ? j * 2 + 2 : j * 2
-        ]
-          .replaceAll('Thunderstorms', 'Thunder storms')
-          .replaceAll('Scattered', "Sct'd")
-          .replaceAll('Thundershowers', 'Thunder showers')
-          .replaceAll('/Wind', ' & Windy')
-          .replaceAll('Rain/', 'Rain, ')
-          .replaceAll('Clouds/PM', 'Clouds, PM');
-        dayWAtoAdd.icon =
-          data.daypart[0].iconCodeExtend[
-            data.daypart[0].iconCodeExtend[0] === null ? j * 2 + 2 : j * 2
-          ];
-        dayWAtoAdd.high =
-          data.daypart[0].temperature[data.daypart[0].temperature[0] === null ? j * 2 + 2 : j * 2];
-        dayWAtoAdd.low =
-          data.daypart[0].temperature[
-            data.daypart[0].temperature[0] === null ? j * 2 + 3 : j * 2 + 1
-          ];
-        if (data.daypart[0].temperature[0] != null && j === 0) {
-          dayWAtoAdd.low = '';
+        //36 HOUR
+        for (
+          var i = data.daypart[0].daypartName[0] === null ? 1 : 0;
+          i < (data.daypart[0].daypartName[0] === null ? 5 : 4);
+          i++
+        ) {
+          var dayDescToAdd = {
+            name: data.daypart[0].daypartName[i]
+              .replace(
+                'Tomorrow',
+                dayOfWeek[
+                  new Date().getHours() > 3 ? new Date().getDay() : new Date().getDay() - 1
+                ],
+              )
+              .replace(' night', ' Night'),
+            desc: data.daypart[0].narrative[i].replaceAll('F. ', '. '),
+            narrQualiCode:
+              data.daypart[0].qualifierCode[i] == null
+                ? ''
+                : data.daypart[0].qualifierCode[i].replace('Q', ''),
+            iconCode: data.daypart[0].iconCodeExtend[i],
+            cond: {
+              name: codetoFcst[data.daypart[0].iconCodeExtend[i]].mov,
+              time: data.daypart[0].daypartName[i].endsWith('night') ? '_night' : '_day',
+            },
+          };
+          weatherInfo.dayDesc.days.push(dayDescToAdd);
         }
-        weatherInfo.weekAhead.days.push(dayWAtoAdd);
-      }
-      //ALMANAC
-      var almOffset = data.dayOfWeek[0] === null ? 1 : 0;
-      var almanacDayOne = {
-        day: data.dayOfWeek[almOffset].toUpperCase(),
-        sunrise: new Date(data.sunriseTimeLocal[almOffset])
-          .toLocaleTimeString('en-US', { hour: 'numeric', hour12: true, minute: 'numeric' })
-          .toLowerCase(),
-        sunset: new Date(data.sunsetTimeLocal[almOffset])
-          .toLocaleTimeString('en-US', { hour: 'numeric', hour12: true, minute: 'numeric' })
-          .toLowerCase(),
-      };
-      weatherInfo.almanac.days.push(almanacDayOne);
-      var almanacDayTwo = {
-        day: data.dayOfWeek[almOffset + 1].toUpperCase(),
-        sunrise: new Date(data.sunriseTimeLocal[almOffset + 1])
-          .toLocaleTimeString('en-US', { hour: 'numeric', hour12: true, minute: 'numeric' })
-          .toLowerCase(),
-        sunset: new Date(data.sunsetTimeLocal[almOffset + 1])
-          .toLocaleTimeString('en-US', { hour: 'numeric', hour12: true, minute: 'numeric' })
-          .toLowerCase(),
-      };
-      weatherInfo.almanac.days.push(almanacDayTwo);
-    },
-    function () {
-      weatherInfo.dayDesc.noReport = true;
-      weatherInfo.weekAhead.noReport = true;
-      weatherInfo.almanac.noReport = true;
-      var periods = ['Today', 'Tonight', 'Tomorrow'];
-      for (var i = 0; i < 4; i++) {
-        var dayDescToAddNR = {
-          name: periods[i % periods.length],
-          desc: 'Temporarily Unavailable',
-          cond: { name: '', time: '' },
+        //7 DAY
+        for (var j = 0; j < 7; j++) {
+          var dayWAtoAdd = { name: '', cond: '', icon: '', high: '', low: '', windspeed: '' };
+          dayWAtoAdd.name = data.dayOfWeek[data.daypart[0].wxPhraseLong[0] === null ? j + 1 : j]
+            .substring(0, 3)
+            .toUpperCase();
+          dayWAtoAdd.cond = data.daypart[0].wxPhraseLong[
+            data.daypart[0].wxPhraseLong[0] === null ? j * 2 + 2 : j * 2
+          ]
+            .replaceAll('Thunderstorms', 'Thunder storms')
+            .replaceAll('Scattered', "Sct'd")
+            .replaceAll('Thundershowers', 'Thunder showers')
+            .replaceAll('/Wind', ' & Windy')
+            .replaceAll('Rain/', 'Rain, ')
+            .replaceAll('Clouds/PM', 'Clouds, PM');
+          dayWAtoAdd.icon =
+            data.daypart[0].iconCodeExtend[
+              data.daypart[0].iconCodeExtend[0] === null ? j * 2 + 2 : j * 2
+            ];
+          dayWAtoAdd.high =
+            data.daypart[0].temperature[
+              data.daypart[0].temperature[0] === null ? j * 2 + 2 : j * 2
+            ];
+          dayWAtoAdd.low =
+            data.daypart[0].temperature[
+              data.daypart[0].temperature[0] === null ? j * 2 + 3 : j * 2 + 1
+            ];
+          if (data.daypart[0].temperature[0] != null && j === 0) {
+            dayWAtoAdd.low = '';
+          }
+          weatherInfo.weekAhead.days.push(dayWAtoAdd);
+        }
+        //ALMANAC
+        var almOffset = data.dayOfWeek[0] === null ? 1 : 0;
+        var almanacDayOne = {
+          day: data.dayOfWeek[almOffset].toUpperCase(),
+          sunrise: new Date(data.sunriseTimeLocal[almOffset])
+            .toLocaleTimeString('en-US', { hour: 'numeric', hour12: true, minute: 'numeric' })
+            .toLowerCase(),
+          sunset: new Date(data.sunsetTimeLocal[almOffset])
+            .toLocaleTimeString('en-US', { hour: 'numeric', hour12: true, minute: 'numeric' })
+            .toLowerCase(),
         };
-        weatherInfo.dayDesc.days.push(dayDescToAddNR);
-      }
-      for (var j = 0; j < 7; j++) {
-        var dayOfWeek = { 0: 'Mon', 1: 'Tue', 2: 'Wed', 3: 'Thu', 4: 'Fri', 5: 'Sat', 6: 'Sun' };
-        var dayWAtoAddNR = {
-          name: dayOfWeek[(new Date().getDay() + j) % 7],
-          cond: '',
-          icon: 4400,
-          high: '',
-          low: '',
+        weatherInfo.almanac.days.push(almanacDayOne);
+        var almanacDayTwo = {
+          day: data.dayOfWeek[almOffset + 1].toUpperCase(),
+          sunrise: new Date(data.sunriseTimeLocal[almOffset + 1])
+            .toLocaleTimeString('en-US', { hour: 'numeric', hour12: true, minute: 'numeric' })
+            .toLowerCase(),
+          sunset: new Date(data.sunsetTimeLocal[almOffset + 1])
+            .toLocaleTimeString('en-US', { hour: 'numeric', hour12: true, minute: 'numeric' })
+            .toLowerCase(),
         };
-        weatherInfo.weekAhead.days.push(dayWAtoAddNR);
-      }
-      weatherInfo.almanac.days.push({ day: '', sunrise: '', sunset: '' });
-      weatherInfo.almanac.days.push({ day: '', sunrise: '', sunset: '' });
-    },
-  );
+        weatherInfo.almanac.days.push(almanacDayTwo);
+      },
+      weatherInfo,
+    )
+      .fail(function () {
+        weatherInfo.dayDesc.noReport = true;
+        weatherInfo.weekAhead.noReport = true;
+        weatherInfo.almanac.noReport = true;
+        var periods = ['Today', 'Tonight', 'Tomorrow'];
+        for (var i = 0; i < 4; i++) {
+          var dayDescToAddNR = {
+            name: periods[i % periods.length],
+            desc: 'Temporarily Unavailable',
+            cond: { name: '', time: '' },
+          };
+          weatherInfo.dayDesc.days.push(dayDescToAddNR);
+        }
+        for (var j = 0; j < 7; j++) {
+          var dayOfWeek = { 0: 'Mon', 1: 'Tue', 2: 'Wed', 3: 'Thu', 4: 'Fri', 5: 'Sat', 6: 'Sun' };
+          var dayWAtoAddNR = {
+            name: dayOfWeek[(new Date().getDay() + j) % 7],
+            cond: '',
+            icon: 4400,
+            high: '',
+            low: '',
+          };
+          weatherInfo.weekAhead.days.push(dayWAtoAddNR);
+        }
+        weatherInfo.almanac.days.push({ day: '', sunrise: '', sunset: '' });
+        weatherInfo.almanac.days.push({ day: '', sunrise: '', sunset: '' });
+      })
+      .always(() => resolve());
+  });
   //console.log(weatherInfo.dayDesc);
   //console.log(weatherInfo.weekAhead);
 }
 //taken from joe's weatherstar jr sim
-async function grabMonthlyPrecip() {
+async function grabMonthlyPrecip(weatherInfo = window.weatherInfo) {
   var url =
     '/api/weather/v1/geocode/' +
     locationConfig.mainCity.lat +
     '/' +
     locationConfig.mainCity.lon +
     '/observations/current.json?language=en-US&units=e';
-  await requestWeather(
-    url,
-    function (data) {
-      try {
-        weatherInfo.monthlyPrecip = data.observation.imperial.precip_mtd.toFixed(2);
-      } catch (error) {
+  await new Promise((resolve) => {
+    weatherJSON(
+      url,
+      function (data) {
+        try {
+          weatherInfo.monthlyPrecip = data.observation.imperial.precip_mtd.toFixed(2);
+        } catch (error) {
+          weatherInfo.monthlyPrecip = '';
+        }
+      },
+      weatherInfo,
+    )
+      .fail(function () {
         weatherInfo.monthlyPrecip = '';
-      }
-    },
-    function () {
-      weatherInfo.monthlyPrecip = '';
-    },
-  );
+      })
+      .always(() => resolve());
+  });
 }
-async function grabAirQuality() {
+async function grabAirQuality(weatherInfo = window.weatherInfo) {
   weatherInfo.airQuality.pollutants = [];
   var pollutantCount = 0;
-  await requestWeather(
-    `/api/weather/v3/wx/globalAirQuality?geocode=${locationConfig.mainCity.lat},${locationConfig.mainCity.lon}&language=en-US&scale=EPA&format=json`,
-    function (data) {
-      weatherInfo.airQuality.category = data.globalairquality.airQualityCategory;
-      weatherInfo.airQuality.categoryIndex = data.globalairquality.airQualityCategoryIndex;
-      for (pollutant in data.globalairquality.pollutants) {
-        pollutantCount++;
-        if (
-          data.globalairquality.pollutants[pollutant].categoryIndex ==
-          data.globalairquality.airQualityCategoryIndex
-        ) {
-          var phr = data.globalairquality.pollutants[pollutant].phrase.startsWith(
-            'Particulate matter',
-          )
-            ? 'Particulate matter'
-            : data.globalairquality.pollutants[pollutant].phrase;
-          weatherInfo.airQuality.pollutants.push(phr);
+  await new Promise((resolve) => {
+    weatherJSON(
+      `/api/weather/v3/wx/globalAirQuality?geocode=${locationConfig.mainCity.lat},${locationConfig.mainCity.lon}&language=en-US&scale=EPA&format=json`,
+      function (data) {
+        weatherInfo.airQuality.category = data.globalairquality.airQualityCategory;
+        weatherInfo.airQuality.categoryIndex = data.globalairquality.airQualityCategoryIndex;
+        for (pollutant in data.globalairquality.pollutants) {
+          pollutantCount++;
+          if (
+            data.globalairquality.pollutants[pollutant].categoryIndex ==
+            data.globalairquality.airQualityCategoryIndex
+          ) {
+            var phr = data.globalairquality.pollutants[pollutant].phrase.startsWith(
+              'Particulate matter',
+            )
+              ? 'Particulate matter'
+              : data.globalairquality.pollutants[pollutant].phrase;
+            weatherInfo.airQuality.pollutants.push(phr);
+          }
         }
-      }
-      if (
-        weatherInfo.airQuality.pollutants.length == 0 ||
-        weatherInfo.airQuality.pollutants.length == pollutantCount
-      ) {
-        weatherInfo.airQuality.pollutants = [];
-        weatherInfo.airQuality.pollutants.push('None');
-      }
-    },
-  );
+        if (
+          weatherInfo.airQuality.pollutants.length == 0 ||
+          weatherInfo.airQuality.pollutants.length == pollutantCount
+        ) {
+          weatherInfo.airQuality.pollutants = [];
+          weatherInfo.airQuality.pollutants.push('None');
+        }
+      },
+      weatherInfo,
+    ).always(() => resolve());
+  });
 }
 
-async function grabAlmanac() {
+async function grabAlmanac(weatherInfo = window.weatherInfo) {
   var date = new Date();
   date.setDate(date.getDate() - 1);
   var yidx = new Date().getHours() >= 15 ? 1 : 0;
-  await requestWeather(
-    `/api/weather/v3/aggcommon/v3-wx-conditions-historical-dailysummary-30day;v3-wx-almanac-daily-5day?geocode=${locationConfig.mainCity.lat},${locationConfig.mainCity.lon}&language=en-US&format=json&units=e&startDay=${date.getDate()}&startMonth=${date.getMonth() + 1}`,
-    function (data) {
-      if (data['v3-wx-almanac-daily-5day'] == null) {
-        weatherInfo.almanac.noReport = true;
-        return;
-      }
-      weatherInfo.almanac.stationname = locationConfig.mainCity.displayname.toUpperCase();
-      weatherInfo.almanac.average.high = data['v3-wx-almanac-daily-5day'].temperatureAverageMax[1];
-      weatherInfo.almanac.average.low = data['v3-wx-almanac-daily-5day'].temperatureAverageMin[1];
-      weatherInfo.almanac.record.high = data['v3-wx-almanac-daily-5day'].temperatureRecordMax[1];
-      weatherInfo.almanac.record.recordYearHigh =
-        data['v3-wx-almanac-daily-5day'].almanacRecordYearMax[1];
-      weatherInfo.almanac.record.low = data['v3-wx-almanac-daily-5day'].temperatureRecordMin[1];
-      weatherInfo.almanac.record.recordYearLow =
-        data['v3-wx-almanac-daily-5day'].almanacRecordYearMin[1];
-      weatherInfo.almanac.yesterday.high =
-        data['v3-wx-conditions-historical-dailysummary-30day'].temperatureMax[
-          data['v3-wx-conditions-historical-dailysummary-30day'].temperatureMax.length - 1 - yidx
-        ];
-      weatherInfo.almanac.yesterday.low =
-        data['v3-wx-conditions-historical-dailysummary-30day'].temperatureMin[
-          data['v3-wx-conditions-historical-dailysummary-30day'].temperatureMin.length - 1 - yidx
-        ];
-    },
-  );
+  await new Promise((resolve) => {
+    weatherJSON(
+      `/api/weather/v3/aggcommon/v3-wx-conditions-historical-dailysummary-30day;v3-wx-almanac-daily-5day?geocode=${locationConfig.mainCity.lat},${locationConfig.mainCity.lon}&language=en-US&format=json&units=e&startDay=${date.getDate()}&startMonth=${date.getMonth() + 1}`,
+      function (data) {
+        if (data['v3-wx-almanac-daily-5day'] == null) {
+          weatherInfo.almanac.noReport = true;
+          return;
+        }
+        weatherInfo.almanac.stationname = locationConfig.mainCity.displayname.toUpperCase();
+        weatherInfo.almanac.average.high =
+          data['v3-wx-almanac-daily-5day'].temperatureAverageMax[1];
+        weatherInfo.almanac.average.low = data['v3-wx-almanac-daily-5day'].temperatureAverageMin[1];
+        weatherInfo.almanac.record.high = data['v3-wx-almanac-daily-5day'].temperatureRecordMax[1];
+        weatherInfo.almanac.record.recordYearHigh =
+          data['v3-wx-almanac-daily-5day'].almanacRecordYearMax[1];
+        weatherInfo.almanac.record.low = data['v3-wx-almanac-daily-5day'].temperatureRecordMin[1];
+        weatherInfo.almanac.record.recordYearLow =
+          data['v3-wx-almanac-daily-5day'].almanacRecordYearMin[1];
+        weatherInfo.almanac.yesterday.high =
+          data['v3-wx-conditions-historical-dailysummary-30day'].temperatureMax[
+            data['v3-wx-conditions-historical-dailysummary-30day'].temperatureMax.length - 1 - yidx
+          ];
+        weatherInfo.almanac.yesterday.low =
+          data['v3-wx-conditions-historical-dailysummary-30day'].temperatureMin[
+            data['v3-wx-conditions-historical-dailysummary-30day'].temperatureMin.length - 1 - yidx
+          ];
+      },
+      weatherInfo,
+    ).always(() => resolve());
+  });
 }
 
-async function grabDaypartForecast() {
+async function grabDaypartForecast(weatherInfo = window.weatherInfo) {
   weatherInfo.daypartForecast.times = [];
   var dpHours = [];
   var dayOfWeek = {
@@ -467,58 +601,62 @@ async function grabDaypartForecast() {
     ',' +
     locationConfig.mainCity.lon +
     '&format=json&units=e&language=en-US';
-  await requestWeather(
-    url,
-    function (data) {
-      // console.log(dateFns.getHours(data.validTimeLocal[0]));
-      // console.log(data.precipChance[0]);
-      if (data.precipChance[0] > 15) {
-        weatherInfo.specialModes.precip = true;
-      }
-      var dpidx = 0;
-      for (var i = 0; i < data.validTimeLocal.length; i++) {
-        var dpTime = dateFns.getHours(data.validTimeLocal[i]);
-        if (dpTime == dpHours[dpidx]) {
-          var dayPartToAdd = { name: '', cond: '', icon: '', temp: '', wind: '', windspeed: '' };
-          dayPartToAdd.name = {
-            0: 'Midnight',
-            6: '6 am',
-            12: 'Noon',
-            15: '3 pm',
-            17: '5 pm',
-            20: '8 pm',
-          }[dpTime];
-          dayPartToAdd.cond = data.wxPhraseLong[i]
-            .replaceAll('/Wind', ' & Wind')
-            .replaceAll('Rain/', 'Rain & ');
-          dayPartToAdd.icon = data.iconCodeExtend[i];
-          dayPartToAdd.temp = data.temperature[i];
-          dayPartToAdd.wind =
-            data.windSpeed[i] == 0
-              ? 'Calm'
-              : `${data.windDirectionCardinal[i]} ${data.windSpeed[i]}`;
-          dayPartToAdd.windspeed = data.windSpeed[i];
-          weatherInfo.daypartForecast.times.push(dayPartToAdd);
-          dpidx++;
+  await new Promise((resolve) => {
+    weatherJSON(
+      url,
+      function (data) {
+        // console.log(dateFns.getHours(data.validTimeLocal[0]));
+        // console.log(data.precipChance[0]);
+        if (data.precipChance[0] > 15) {
+          weatherInfo.specialModes.precip = true;
         }
-      }
-    },
-    function () {
-      weatherInfo.daypartForecast.noReport = true;
-      for (var i = 0; i < 4; i++) {
-        weatherInfo.daypartForecast.times.push({
-          name: '',
-          cond: '',
-          icon: 4400,
-          temp: '',
-          wind: '',
-          windspeed: '',
-        });
-      }
-    },
-  );
+        var dpidx = 0;
+        for (var i = 0; i < data.validTimeLocal.length; i++) {
+          var dpTime = dateFns.getHours(data.validTimeLocal[i]);
+          if (dpTime == dpHours[dpidx]) {
+            var dayPartToAdd = { name: '', cond: '', icon: '', temp: '', wind: '', windspeed: '' };
+            dayPartToAdd.name = {
+              0: 'Midnight',
+              6: '6 am',
+              12: 'Noon',
+              15: '3 pm',
+              17: '5 pm',
+              20: '8 pm',
+            }[dpTime];
+            dayPartToAdd.cond = data.wxPhraseLong[i]
+              .replaceAll('/Wind', ' & Wind')
+              .replaceAll('Rain/', 'Rain & ');
+            dayPartToAdd.icon = data.iconCodeExtend[i];
+            dayPartToAdd.temp = data.temperature[i];
+            dayPartToAdd.wind =
+              data.windSpeed[i] == 0
+                ? 'Calm'
+                : `${data.windDirectionCardinal[i]} ${data.windSpeed[i]}`;
+            dayPartToAdd.windspeed = data.windSpeed[i];
+            weatherInfo.daypartForecast.times.push(dayPartToAdd);
+            dpidx++;
+          }
+        }
+      },
+      weatherInfo,
+    )
+      .fail(function () {
+        weatherInfo.daypartForecast.noReport = true;
+        for (var i = 0; i < 4; i++) {
+          weatherInfo.daypartForecast.times.push({
+            name: '',
+            cond: '',
+            icon: 4400,
+            temp: '',
+            wind: '',
+            windspeed: '',
+          });
+        }
+      })
+      .always(() => resolve());
+  });
 }
-async function grabMapCityData() {
+async function grabMapCityData(weatherInfo = window.weatherInfo) {
   weatherInfo.map.mapCities = [];
   var url =
     '/api/weather/v3/aggcommon/v3-wx-observations-current;v3-wx-forecast-daily-3day?geocodes=';
@@ -528,151 +666,161 @@ async function grabMapCityData() {
   }
   url += '&language=en-US&units=e&format=json';
   var midx = 0;
-  await requestWeather(url, function (data) {
-    midx = data[0]['v3-wx-forecast-daily-3day'].daypart[0].temperature[0] == null ? 1 : 0;
-    weatherInfo.map.days = [
-      data[0]['v3-wx-forecast-daily-3day'].daypart[0].daypartName[midx],
-      data[0]['v3-wx-forecast-daily-3day'].daypart[0].daypartName[midx + 1] == 'Tomorrow'
-        ? data[0]['v3-wx-forecast-daily-3day'].dayOfWeek[1]
-        : data[0]['v3-wx-forecast-daily-3day'].daypart[0].daypartName[midx + 1],
-    ];
-    data.forEach((ajaxedLoc, i) => {
-      //console.log(ajaxedLoc);
-      var mapObj = {
-        name: locationConfig.regionalMap.map[i].name,
-        current: {
-          temp: ajaxedLoc['v3-wx-observations-current'].temperature,
-          icon: ajaxedLoc['v3-wx-observations-current'].iconCodeExtend,
-        },
-        forecasts: [
-          {
-            temp: ajaxedLoc['v3-wx-forecast-daily-3day'].daypart[0].temperature[midx],
-            icon: ajaxedLoc['v3-wx-forecast-daily-3day'].daypart[0].iconCodeExtend[midx],
-          },
-          {
-            temp: ajaxedLoc['v3-wx-forecast-daily-3day'].daypart[0].temperature[midx + 1],
-            icon: ajaxedLoc['v3-wx-forecast-daily-3day'].daypart[0].iconCodeExtend[midx + 1],
-          },
-        ],
-      };
-      weatherInfo.map.mapCities.push(mapObj);
-    });
+  await new Promise((resolve) => {
+    weatherJSON(
+      url,
+      function (data) {
+        midx = data[0]['v3-wx-forecast-daily-3day'].daypart[0].temperature[0] == null ? 1 : 0;
+        weatherInfo.map.days = [
+          data[0]['v3-wx-forecast-daily-3day'].daypart[0].daypartName[midx],
+          data[0]['v3-wx-forecast-daily-3day'].daypart[0].daypartName[midx + 1] == 'Tomorrow'
+            ? data[0]['v3-wx-forecast-daily-3day'].dayOfWeek[1]
+            : data[0]['v3-wx-forecast-daily-3day'].daypart[0].daypartName[midx + 1],
+        ];
+        data.forEach((ajaxedLoc, i) => {
+          //console.log(ajaxedLoc);
+          var mapObj = {
+            name: locationConfig.regionalMap.map[i].name,
+            current: {
+              temp: ajaxedLoc['v3-wx-observations-current'].temperature,
+              icon: ajaxedLoc['v3-wx-observations-current'].iconCodeExtend,
+            },
+            forecasts: [
+              {
+                temp: ajaxedLoc['v3-wx-forecast-daily-3day'].daypart[0].temperature[midx],
+                icon: ajaxedLoc['v3-wx-forecast-daily-3day'].daypart[0].iconCodeExtend[midx],
+              },
+              {
+                temp: ajaxedLoc['v3-wx-forecast-daily-3day'].daypart[0].temperature[midx + 1],
+                icon: ajaxedLoc['v3-wx-forecast-daily-3day'].daypart[0].iconCodeExtend[midx + 1],
+              },
+            ],
+          };
+          weatherInfo.map.mapCities.push(mapObj);
+        });
+      },
+      weatherInfo,
+    ).always(() => resolve());
   });
 }
 
-async function grabAlerts() {
+async function grabAlerts(weatherInfo = window.weatherInfo) {
+  const details = [];
   weatherInfo.bulletin.alerts = [];
   weatherInfo.bulletin.enabled = false;
   weatherInfo.bulletin.crawlAlert.enabled = false;
   weatherInfo.specialModes.bulletin = false;
-  await requestWeather(
-    `/api/weather/v3/alerts/headlines?geocode=${locationConfig.mainCity.lat},${locationConfig.mainCity.lon}&format=json&language=en-US`,
-    function (data) {
-      if (!data) {
+  await new Promise((resolve) => {
+    weatherJSON(
+      `/api/weather/v3/alerts/headlines?geocode=${locationConfig.mainCity.lat},${locationConfig.mainCity.lon}&format=json&language=en-US`,
+      function (data) {
+        if (!data) {
+          weatherInfo.bulletin.enabled = false;
+          weatherInfo.bulletin.crawlAlert.enabled = false;
+          weatherInfo.bulletin.crawlAlert.alert = undefined;
+          return;
+        }
+        weatherInfo.bulletin.enabled = true;
+        for (let i = 0; i < data.alerts.length; i++) {
+          if (data.alerts[i].eventDescription == 'Special Weather Statement') {
+            details.push(grabAlertCrawl(data.alerts[i].detailKey, weatherInfo));
+            continue;
+          }
+          var bulletinAlert = {
+            name: data.alerts[i].eventDescription,
+            significance: data.alerts[i].significance,
+            desc: data.alerts[i].headlineText,
+            detailKey: data.alerts[i].detailKey,
+            severity: data.alerts[i].severity,
+          };
+
+          if (warningSettings[data.alerts[i].eventDescription]) {
+            bulletinAlert.priority = warningSettings[data.alerts[i].eventDescription].priority;
+            if (!warningSettings[data.alerts[i].eventDescription].included) {
+              return;
+            }
+          } else {
+            bulletinAlert.priority = 125;
+          }
+
+          var sameBulletin = false;
+          for (let j = 0; j < weatherInfo.bulletin.alerts.length; j++) {
+            if (data.alerts[i].eventDescription == weatherInfo.bulletin.alerts[j].name) {
+              sameBulletin = true;
+            }
+          }
+          if (sameBulletin) {
+            continue;
+          }
+          if (weatherInfo.bulletin.crawlAlert.enabled == false && data.alerts[i].urgencyCode == 1) {
+            weatherInfo.bulletin.crawlAlert.enabled = true;
+            details.push(grabAlertCrawl(bulletinAlert.detailKey, weatherInfo));
+          } else {
+            weatherInfo.bulletin.alerts.push(bulletinAlert);
+          }
+        }
+        weatherInfo.bulletin.alerts = weatherInfo.bulletin.alerts.sort(
+          (a, b) => a.priority - b.priority,
+        );
+        if (weatherInfo.bulletin.alerts.length > 0) {
+          weatherInfo.specialModes.bulletin = true;
+        } else {
+          weatherInfo.specialModes.bulletin = false;
+          weatherInfo.bulletin.enabled = false;
+          weatherInfo.bulletin.crawlAlert.enabled = false;
+          weatherInfo.bulletin.crawlAlert.alert = undefined;
+        }
+      },
+      weatherInfo,
+    )
+      .fail(function () {
+        if (weatherInfo.bulletin.alerts.length <= 0) {
+          weatherInfo.specialModes.bulletin = false;
+        }
         weatherInfo.bulletin.enabled = false;
         weatherInfo.bulletin.crawlAlert.enabled = false;
         weatherInfo.bulletin.crawlAlert.alert = undefined;
-        endAlertCrawl();
-        return;
-      }
-      weatherInfo.bulletin.enabled = true;
-      for (let i = 0; i < data.alerts.length; i++) {
-        if (data.alerts[i].eventDescription == 'Special Weather Statement') {
-          grabAlertCrawl(data.alerts[i].detailKey);
-          continue;
-        }
-        var bulletinAlert = {
-          name: data.alerts[i].eventDescription,
-          significance: data.alerts[i].significance,
-          desc: data.alerts[i].headlineText,
-          detailKey: data.alerts[i].detailKey,
-          severity: data.alerts[i].severity,
-        };
-
-        if (warningSettings[data.alerts[i].eventDescription]) {
-          bulletinAlert.priority = warningSettings[data.alerts[i].eventDescription].priority;
-          if (!warningSettings[data.alerts[i].eventDescription].included) {
-            return;
-          }
-        } else {
-          bulletinAlert.priority = 125;
-        }
-
-        var sameBulletin = false;
-        for (let j = 0; j < weatherInfo.bulletin.alerts.length; j++) {
-          if (data.alerts[i].eventDescription == weatherInfo.bulletin.alerts[j].name) {
-            sameBulletin = true;
-          }
-        }
-        if (sameBulletin) {
-          continue;
-        }
-        if (weatherInfo.bulletin.crawlAlert.enabled == false && data.alerts[i].urgencyCode == 1) {
-          weatherInfo.bulletin.crawlAlert.enabled = true;
-          grabAlertCrawl(bulletinAlert.detailKey);
-        } else {
-          weatherInfo.bulletin.alerts.push(bulletinAlert);
-        }
-      }
-      weatherInfo.bulletin.alerts = weatherInfo.bulletin.alerts.sort(
-        (a, b) => a.priority - b.priority,
-      );
-      if (weatherInfo.bulletin.alerts.length > 0) {
-        weatherInfo.specialModes.bulletin = true;
-      } else {
-        weatherInfo.specialModes.bulletin = false;
-        weatherInfo.bulletin.enabled = false;
-        weatherInfo.bulletin.crawlAlert.enabled = false;
-        weatherInfo.bulletin.crawlAlert.alert = undefined;
-        endAlertCrawl();
-      }
-    },
-    function () {
-      if (weatherInfo.bulletin.alerts.length <= 0) {
-        weatherInfo.specialModes.bulletin = false;
-      }
-      weatherInfo.bulletin.enabled = false;
-      weatherInfo.bulletin.crawlAlert.enabled = false;
-      weatherInfo.bulletin.crawlAlert.alert = undefined;
-      endAlertCrawl();
-    },
-  );
+      })
+      .always(() => resolve());
+  });
+  await Promise.all(details);
 }
-async function grabAlertCrawl(dKey) {
+async function grabAlertCrawl(dKey, weatherInfo = window.weatherInfo) {
   weatherInfo.bulletin.crawlAlert.enabled = true;
   if (weatherInfo.bulletin.crawlAlert.alert != undefined) {
     if (weatherInfo.bulletin.crawlAlert.alert.detailKey == dKey) return;
   }
-  await requestWeather(
-    '/api/weather/v3/alerts/detail?alertId=' + dKey + '&format=json&language=en-US',
-    function (data) {
-      console.log(data);
-      if (
-        weatherInfo.bulletin.crawlAlert.alert != undefined &&
-        weatherInfo.bulletin.crawlAlert.alert.priority >
-          warningSettings[data.alertDetail.eventDescription].priority
-      )
-        return;
-      var alert = {
-        name: data.alertDetail.eventDescription,
-        code: data.alertDetail.productIdentifier,
-        type: data.alertDetail.messageType,
-        significance: data.alertDetail.significance,
-        description: data.alertDetail.texts[0].description,
-        severe: warningSettings[data.alertDetail.eventDescription].severe,
-        priority: warningSettings[data.alertDetail.eventDescription].priority,
-        detailKey: dKey,
-      };
-      if (alert.severe) {
-        weatherInfo.bulletin.crawlAlert.alert = [];
-      }
-      weatherInfo.bulletin.crawlAlert.alert = alert;
-      setTimeout(startAlertCrawl, 1000);
-    },
-  );
+  await new Promise((resolve) => {
+    weatherJSON(
+      '/api/weather/v3/alerts/detail?alertId=' + dKey + '&format=json&language=en-US',
+      function (data) {
+        if (
+          weatherInfo.bulletin.crawlAlert.alert != undefined &&
+          weatherInfo.bulletin.crawlAlert.alert.priority >
+            warningSettings[data.alertDetail.eventDescription].priority
+        )
+          return;
+        var alert = {
+          name: data.alertDetail.eventDescription,
+          code: data.alertDetail.productIdentifier,
+          type: data.alertDetail.messageType,
+          significance: data.alertDetail.significance,
+          description: data.alertDetail.texts[0].description,
+          severe: warningSettings[data.alertDetail.eventDescription].severe,
+          priority: warningSettings[data.alertDetail.eventDescription].priority,
+          detailKey: dKey,
+        };
+        if (alert.severe) {
+          weatherInfo.bulletin.crawlAlert.alert = [];
+        }
+        weatherInfo.bulletin.crawlAlert.alert = alert;
+      },
+      weatherInfo,
+    ).always(() => resolve());
+  });
 }
 async function grabMoonphases() {}
-async function grabOutdoorActivityData() {
+async function grabOutdoorActivityData(weatherInfo = window.weatherInfo) {
   var oaCurrent = () => {
     if (dateFns.getHours(new Date()) <= 6) {
       return 9;
@@ -691,34 +839,38 @@ async function grabOutdoorActivityData() {
     ',' +
     locationConfig.mainCity.lon +
     '&format=json&units=e&language=en-US';
-  await requestWeather(
-    url,
-    function (data) {
-      try {
-        for (let i = 0; i < data.validTimeLocal.length; i++) {
-          if (dateFns.getHours(data.validTimeLocal[i]) == oaCurrent()) {
-            weatherInfo.outdoorActivity.time = `${dateFns.format(data.validTimeLocal[i], 'h')}${oaCurrent() == 9 ? 'am' : 'pm'} ${data.dayOfWeek[i]}`;
-            weatherInfo.outdoorActivity.temp = data.temperature[i];
-            weatherInfo.outdoorActivity.cond = data.wxPhraseLong[i];
-            weatherInfo.outdoorActivity.icon = data.iconCodeExtend[i];
-            weatherInfo.outdoorActivity.wind =
-              data.windDirectionCardinal[i] + ' ' + data.windSpeed[i];
-            if (data.temperatureHeatIndex[i] > data.temperature[i] + 3) {
-              weatherInfo.outdoorActivity.feelslike.type = 'Heat Index';
-              weatherInfo.outdoorActivity.feelslike.val = data.temperatureHeatIndex[i];
-            } else if (data.temperatureWindChill[i] < data.temperature[i] - 3) {
-              weatherInfo.outdoorActivity.feelslike.type = 'Wind Chill';
-              weatherInfo.outdoorActivity.feelslike.val = data.temperatureWindChill[i];
+  await new Promise((resolve) => {
+    weatherJSON(
+      url,
+      function (data) {
+        try {
+          for (let i = 0; i < data.validTimeLocal.length; i++) {
+            if (dateFns.getHours(data.validTimeLocal[i]) == oaCurrent()) {
+              weatherInfo.outdoorActivity.time = `${dateFns.format(data.validTimeLocal[i], 'h')}${oaCurrent() == 9 ? 'am' : 'pm'} ${data.dayOfWeek[i]}`;
+              weatherInfo.outdoorActivity.temp = data.temperature[i];
+              weatherInfo.outdoorActivity.cond = data.wxPhraseLong[i];
+              weatherInfo.outdoorActivity.icon = data.iconCodeExtend[i];
+              weatherInfo.outdoorActivity.wind =
+                data.windDirectionCardinal[i] + ' ' + data.windSpeed[i];
+              if (data.temperatureHeatIndex[i] > data.temperature[i] + 3) {
+                weatherInfo.outdoorActivity.feelslike.type = 'Heat Index';
+                weatherInfo.outdoorActivity.feelslike.val = data.temperatureHeatIndex[i];
+              } else if (data.temperatureWindChill[i] < data.temperature[i] - 3) {
+                weatherInfo.outdoorActivity.feelslike.type = 'Wind Chill';
+                weatherInfo.outdoorActivity.feelslike.val = data.temperatureWindChill[i];
+              }
+              break;
             }
-            break;
           }
+        } catch (error) {
+          weatherInfo.outdoorActivity.noReport = true;
         }
-      } catch (error) {
+      },
+      weatherInfo,
+    )
+      .fail(function () {
         weatherInfo.outdoorActivity.noReport = true;
-      }
-    },
-    function () {
-      weatherInfo.outdoorActivity.noReport = true;
-    },
-  );
+      })
+      .always(() => resolve());
+  });
 }

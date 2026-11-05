@@ -1,0 +1,770 @@
+#settings-menu {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    overflow: hidden;
+    transform: translate(-50%, -50%);
+    width: 1440px;
+    height: 1080px;
+    will-change: transform;
+    pointer-events: none;
+}
+#settings-menu .bg {
+    position: absolute;
+    background-image: url(images/v2/domestic.png);
+    width: 1440px;
+    height: 1080px;
+    background-size: 100% 100%;
+    pointer-events: none;
+}
+.xllogo {
+    left: 310px !important;
+}
+
+#main {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    overflow: hidden;
+    transform: translate(-50%, -50%);
+    width: 1440px;
+    height: 1080px;
+    will-change: transform;
+}
+.slides {
+    height: 1080px;
+    width: 1440px;
+}
+.current-conditions {
+    position: absolute;
+    height: 480px;
+    width: 720px;
+    bottom: 290px;
+    right: 350px;
+    background-image: url(images/v2/xlcc.png);
+    transform: scale(203%, 230%);
+}
+.current-conditions .city-name {
+    position: absolute;
+    font-family: 'AG Bold Ex';
+    color: #debd69;
+    font-size: 24px;
+    margin-left: 81px;
+    margin-top: 105px;
+    text-shadow: 1px 1px #000;
+    letter-spacing: -1.15px;
+}
+.current-conditions .labels {
+    position: absolute;
+    font-family: "AKZID Md Ex";
+    font-size: 25px;
+    margin-left: 81px;
+    margin-top: 149px;
+    text-shadow: 1px 1px #000;
+    transform: scale(1, 1.05);
+    line-height: 28.4px;
+    letter-spacing: 0px;
+}
+.current-conditions .labels span.ceilingg, span.visibilityy, span.feelslikee {
+    font-size: 22px;
+    line-height: 27px;
+    letter-spacing: 0px;
+}
+.current-conditions .temp {
+    font-family: "AKZID Bold";
+    position: absolute;
+    margin-left: 479px;
+    margin-top: 328px;
+    font-size: 48px;
+    text-shadow: 1px 1px #000;
+    letter-spacing: 1px;
+    width: 177.5px;
+    text-align: center;
+}
+.current-conditions .cond {
+font-family: 'AG Bold Ex';
+    text-align: center;
+    position: absolute;
+    margin-left: 478px;
+    width: 177.5px;
+    margin-top: 277px;
+    font-size: 24px;
+    color: #d4d4d4;
+    text-shadow: 1px 1px #000;
+    line-height: 100%;
+    letter-spacing: -1px;
+}
+.current-conditions .left-pane {
+    position: absolute;
+    font-family: 'AG Bold Ex';
+    font-size: 30px;
+    margin-top: 140px;
+    margin-left: 289px;
+    color: #d4d4d4;
+    text-shadow: 1px 1px #000;
+    line-height: 30.5px;
+}
+.current-conditions .left-pane .humidity, .pressure, .wind, .gusts, .dewpoint, .ceiling, .visibility, .feelslike{
+    font-family: inherit;
+}
+.current-conditions .left-pane .humidity, .pressure, .dewpoint {
+    letter-spacing: 0px;
+}
+.current-conditions .left-pane .wind {
+    word-spacing: 15px;
+    letter-spacing: -3px;
+}
+.current-conditions .left-pane .ceiling, .visibility {
+    letter-spacing: -3px;
+}
+
+.current-conditions .pressure .arrow {
+    background-image: url(images/v2/arrow_up_v2.png);
+    width: 32px;
+    height: 29px;
+    margin-left: 135px;
+    margin-top: -30px;
+    transform: scale(80%,80%);
+    position: absolute;
+}
+.current-conditions .icon {
+    background-repeat: no-repeat;
+    background-size: 3700% 95.65%;
+    background-position: 51.35% 77.5%;
+    width: 140px;
+    height: 132px;
+    position: absolute;
+    transform: translate(0, -47.5px);
+    margin-left: 496px;
+    margin-top: 180px;
+}
+.current-conditions .noreport {
+    position: absolute;
+    font-size: 27px;
+    font-family: "AG Bold Ex";
+    margin-top: 350px;
+    margin-left: 189px;
+    letter-spacing: -2.75px;
+    word-spacing: 5px;
+    text-shadow: 1px 1px #000;
+}
+
+.eight-cities {
+    position: absolute;
+    height: 480px;
+    width: 720px;
+    bottom: 290px;
+    right: 350px;
+    background-image: url(images/v2/xlcclo.png);
+    transform: scale(203%, 230%);
+}
+.eight-cities .top .label {    
+    font-family: "AKZID Bold";
+    position: absolute;
+    font-size: 17px;
+    color: #debd69;
+    text-shadow: 1px 1px #000;
+    margin-top: 111px;
+    margin-left: 583px;
+    letter-spacing: 0px;
+}
+.eight-cities .top .label.temp {
+    position: absolute;
+    margin-left: 343px;
+}
+.eight-cities .extra-loc {
+    display: flex;
+    margin-left: 80px;
+    font-size: 28px;
+    width: 580px;
+    height: 60px;
+}
+.eight-cities .extra-loc .city-name {    
+    font-family: "Akzidenz Md";
+    position: absolute;
+    color: #debd69;
+    text-shadow: 1px 1px #000;
+    font-size: 31px;
+    width: 250px;
+    text-align: left;
+    margin-left: -1px;
+    margin-top: -4px;
+    letter-spacing: 0.4px;
+    word-spacing: 1px;
+}
+.eight-cities .extra-loc .temp {
+    position: absolute;
+    font-family: 'AG Bold Ex';
+    margin-left: 266px;
+    text-shadow: 1px 1px #000;
+}
+.eight-cities .extra-loc .wind {    
+    position: absolute;
+    font-family: 'AG Bold Ex';
+    text-shadow: 1px 1px #000;
+    right: 70px;
+    letter-spacing: -2px;
+    margin-top: 1px;
+    word-spacing: 11px;
+    font-size: 27px;
+}
+.eight-cities .extra-loc .icon {
+    background-repeat: no-repeat;
+    background-position: 51.35% 77.5%;
+    width: 76px;
+    height: 68px;
+    position: absolute;
+    transform: translate(0, -47.5px);
+    margin-left: 357px;
+    margin-top: 24px;
+}
+.eight-cities .extra-loc.i {
+    margin-top: 161px;
+}
+.eight-cities .extra-loc.ii .icon {
+    margin-top: 27px;
+}
+.eight-cities .extra-loc.iii .icon {
+    margin-top: 28px;
+}
+.eight-cities .extra-loc.iv .icon {
+    margin-top: 30px;
+}
+.eight-cities .noreport {
+    position: absolute;
+    font-family: "AG Bold Ex";
+    font-size: 21px;
+    margin-left: 265px;
+    margin-top: 6px;
+    letter-spacing: -2.2px;
+    text-shadow: 1px 1px #000;
+    word-spacing: 3.4px;
+}
+
+.local-forecast {
+    position: absolute;
+    height: 480px;
+    width: 720px;
+    bottom: 290px;
+    right: 350px;
+    background-image: url(images/v2/xl36h.png);
+    transform: scale(203%, 230%);
+}
+.local-forecast .city-name {
+    position: absolute;
+    font-family: 'AG Bold Ex';
+    color: #debd69;
+    font-size: 24px;
+    margin-left: 80px;
+    margin-top: 106px;
+    text-shadow: 1px 1px #000;
+    letter-spacing: -1.3px;
+}
+.local-forecast .slide {
+    margin-left: 80px;
+    margin-top: 140px;
+    font-size: 32px;
+    font-family: 'Helvetica Neue';
+    -webkit-text-stroke: 0.4px #000;
+    text-shadow: 1px 1px #000;
+}
+.local-forecast .period {
+    color: #debd69;
+    font-family: inherit;
+}
+.local-forecast .description {
+    font-family: inherit;
+    width: 560px;
+    font-size: 29px;
+}
+.local-forecast .noreport {
+    position: absolute;
+    font-size: 26px;
+    font-family: "AG Bold Ex";
+    margin-top: 217px;
+    margin-left: 162px;
+    letter-spacing: -1.5px;
+    word-spacing: 2px;
+    text-shadow: 1px 1px #000;
+}
+
+.week-ahead {
+    position: absolute;
+    height: 480px;
+    width: 720px;
+    bottom: 290px;
+    right: 350px;
+    background-image: url(images/v2/xlext7.png);
+    transform: scale(203%, 230%);
+}
+.week-ahead .city-name {
+    position: absolute;
+    font-family: 'AG Bold Ex';
+    color: #debd69;
+    font-size: 23px;
+    margin-left: 80px;
+    margin-top: 106px;
+    text-shadow: 1px 1px #000;
+    z-index: 3;
+    letter-spacing: -0.6px;
+    word-spacing: 0px;
+}
+.week-ahead .day .icon {
+    background-repeat: no-repeat;
+    background-position: 51.35% 77.5%;
+    width: 74px;
+    height: 70px;
+    position: absolute;
+    transform: translate(0, -47.5px);
+    margin-top: 82px;
+    margin-left: 3px;
+}
+.week-ahead .day {
+position: absolute;
+    text-align: center;
+    margin-left: -80px;
+    margin-top: 140px;
+    width: 80px;
+    height: 250px;
+    display: block;
+}
+.week-ahead .day .weekend {
+position: absolute;
+    background-color: white;
+    height: 26.5px;
+    margin-top: -0.5px;
+    width: 81px;
+    z-index: 1;
+}
+.week-ahead .day .name {
+    position: absolute;
+    font-family: 'Akzidenz Bold';
+    font-size: 24px;
+    text-shadow: 1px 1px #000;
+    z-index: 2;
+    width: 80px;
+    letter-spacing: 0px;
+    transform: scaleY(0.9);
+}
+.week-ahead .day.i {
+    left: 136px;
+}
+.week-ahead .day.ii{
+    left: 224px;
+}
+.week-ahead .day.iii{
+    left: 311.5px;
+}
+.week-ahead .day.iv{
+    left: 399.5px;
+}
+.week-ahead .day.v{
+    left: 487px;
+}
+.week-ahead .day.vi{
+    left: 575px;
+}
+.week-ahead .day.vii{
+    left: 662.5px;
+}
+.week-ahead .day .cond {
+    position: absolute;
+    margin-top: 108px;
+    width: 80px;
+    text-align: center;
+    text-shadow: 1px 1px #000;
+    font-size: 18px;
+    line-height: 20px;
+    letter-spacing: 0.8px;
+}
+.week-ahead .day .high, .low {
+    position: absolute;
+    font-size: 36px;
+    margin-left: 1px;
+    text-shadow: 1px 1px #000;
+    width: inherit;
+    text-align: center;
+}
+.week-ahead .day .high {
+    margin-top: 167px;
+}
+.week-ahead .day .low {
+    margin-top: 205px;
+}
+.week-ahead .noreport {
+    position: absolute;
+    font-family: 'AG Bold Ex';
+    font-size: 26px;
+    margin-top: 357px;
+    margin-left: 205px;
+    text-shadow: 1px 1px #000;
+    letter-spacing: -1.4px;
+    word-spacing: 1px;
+}
+
+.daypart-forecast {
+    position: absolute;
+    height: 480px;
+    width: 720px;
+    bottom: 290px;
+    right: 350px;
+    transform: scale(203%, 230%);
+}
+.daypart-forecast .city-name {
+    position: absolute;
+    font-family: 'AG Bold Ex';
+    color: #debd69;
+    font-size: 23px;
+    margin-left: 64.5px;
+    margin-top: 106px;
+    text-shadow: 1px 1px #000;
+    letter-spacing: -0.7px;
+}
+.daypart-forecast .hour {
+    position: absolute;
+    width: 148px;
+    height: 246px;
+    margin-top: 144px;
+}
+.daypart-forecast .hour .icon {
+    background-repeat: no-repeat;
+    background-position: 51.35% 77.5%;
+    width: 75px;
+    height: 68px;
+    position: absolute;
+    transform: translate(0, -47.5px);
+    margin-top: 71px;
+    margin-left: 36px;
+}
+.daypart-forecast .hour .name {
+    position: absolute;
+    font-family: 'AKZID Md Ex';
+    text-shadow: 1.5px 1.5px #000;
+    font-size: 24px;
+    margin-top: -2px;
+    width: 148px;
+    text-align: center;
+    letter-spacing: -1px;
+}
+.daypart-forecast .hour .cond {
+    position: absolute;
+    text-shadow: 1px 1px #000;
+    font-size: 18px;
+    margin-top: 92px;
+    width: 148px;
+    text-align: center;
+    line-height: 100%;
+    letter-spacing: 0.25px;
+    margin-left: -3px;
+}
+.daypart-forecast .hour .wind {
+    position: absolute;
+    text-shadow: 1px 1px #000;
+    width: 148px;
+    margin-top: 225px;
+    text-align: center;
+    font-size: 18px;
+    margin-left: -3px;
+}
+.daypart-forecast .hour .temp {
+    font-family: 'AG Bold Ex';
+    position: absolute;
+    color: #232731;
+    font-size: 32px;
+    z-index: 3;
+    width: 100px;
+    margin-left: 18px;
+    text-align: center;
+}
+.daypart-forecast .hour .bar {
+    position: absolute;
+    background-color: #cfd2dd;
+    width: 100px;
+    height: 5px;
+    margin-left: 21px;
+    bottom: 22px;
+}
+.daypart-forecast .hour.i {
+    margin-left: 57px;
+}
+.daypart-forecast .hour.ii {
+    margin-left: 211px;
+}
+.daypart-forecast .hour.iii {
+    margin-left: 365px;
+}
+.daypart-forecast .hour.iv {
+    margin-left: 519px;
+}
+.daypart-forecast .noreport {
+    position: absolute;
+    font-size: 26px;
+    font-family: "AG Bold Ex";
+    margin-top: 357px;
+    margin-left: 204px;
+    letter-spacing: -2px;
+    word-spacing: 5px;
+    text-shadow: 2px 2px #000;
+}
+
+.almanac {
+    position: absolute;
+    height: 480px;
+    width: 720px;
+    bottom: 290px;
+    right: 350px;
+    background-image: url(images/v2/xlalm.png);
+    transform: scale(203%, 230%);
+}
+.almanac .sunrise-text {
+    position: absolute;
+    margin-left: 209px;
+    margin-top: 144px;
+    font-family: 'AKZID Bold';
+    font-size: 22.5px;
+    text-shadow: 1px 1px #000;
+    letter-spacing: -1px;
+}
+.almanac .sunset-text {
+    position: absolute;
+    margin-left: 209px;
+    margin-top: 179px;
+    font-family: 'AKZID Bold';
+    font-size: 22.5px;
+    text-shadow: 1px 1px #000;
+    letter-spacing: -1px;
+}
+.almanac .day .header {
+    position: absolute;
+    color: #debd69;
+    margin-top: 110px;
+    width: 160px;
+    text-align: center;
+    margin-left: 330px;
+    text-shadow: 1px 1px #000;
+    font-family: 'AG Bold Ex';
+    letter-spacing: -1px;
+    font-size: 20px;
+}
+.almanac .day .sunrise {
+    position: absolute;
+    margin-left: 352px;
+    width: 150px;
+    font-family: 'AG Bold Ex';
+    margin-top: 144px;
+    font-size: 21px;
+    text-shadow: 1px 1px #000;
+    word-spacing: -2px;
+}
+.almanac .day .sunset {
+    position: absolute;
+    margin-left: 352px;
+    width: 150px;
+    font-family: 'AG Bold Ex';
+    margin-top: 180px;
+    font-size: 21px;
+    text-shadow: 1px 1px #000;
+    word-spacing: -2px;
+}
+.almanac .day.ii {
+    margin-left: 156px;
+}
+.almanac .moon-phases-text {
+    position: absolute;
+    font-family: 'AKZID Bold';
+    font-size: 23.5px;
+    text-shadow: 1px 1px #000;
+    margin-left: 79px;
+    margin-top: 218px;
+    letter-spacing: -1px;
+}
+.almanac .moonphase .moon {
+    position: absolute;
+    width: 71px;
+    height: 73px;
+    margin-left: 107px;
+    margin-top: 255px;
+    transform: scale(1.15, 1);
+}
+.almanac .moonphase .type {
+    position: absolute;
+    font-family: 'AKZID Md Ex';
+    margin-left: 102px;
+    margin-top: 332px;
+    text-shadow: 1px 1px #000;
+    transform: scale(1, 1.3);
+    width: 80px;
+    text-align: center;
+}
+.almanac .moonphase .date {
+    position: absolute;
+    color: #debd69;
+    text-shadow: 1px 1px #000;
+    font-family: 'AG Bold Ex';
+    width: 120px;
+    margin-left: 81px;
+    margin-top: 352px;
+    font-size: 24px;
+    letter-spacing: -1.2px;
+    text-align: center;
+}
+.almanac .moonphase.ii {
+    margin-left:146px;
+}
+.almanac .moonphase.iii {
+    margin-left:290px;
+}
+.almanac .moonphase.iv {
+    margin-left:435px;
+}
+
+.bulletin {
+    position: absolute;
+    height: 480px;
+    width: 720px;
+    bottom: 290px;
+    right: 350px;
+    background-image: url(images/v2/xlalert.png);
+    transform: scale(203%, 230%);
+}
+.bulletin .alerts {    
+    position: absolute;
+    font-family: 'Helvetica Neue';
+    text-shadow: 1.5px 1.5px #000;
+    font-size: 32px;
+    margin-left: 75px;
+    margin-top: 140px;
+    width: 570px;
+    -webkit-text-stroke: 0.4px #000;
+}
+.bulletin .alerts span {
+    display: flex;
+    height: 120px;
+}
+
+.radar .banner {
+    position: absolute;
+    height: 480px;
+    width: 720px;
+    bottom: 290px;
+    right: 350px;
+    background-image: url(images/v2/us_radar_top.png);
+    transform: scale(203%, 230%);
+    z-index: 5;
+}
+#locradar {
+    position: absolute;
+    width: 1440px;
+    height: 1080px;
+    filter: drop-shadow(2px 2px 0px #000);
+    z-index: 4;
+}
+#locmap {
+    position: absolute;
+    width: 1440px;
+    height: 1080px;
+    z-index: 3;
+}
+
+.ldl {
+    position: absolute;
+    margin-top: -160px;
+    margin-left: 130px;
+    filter: drop-shadow(2px 2px #000);
+}
+.ldl .warning-crawl {
+    position: absolute;
+    height: 1080px;
+    width: 1620px;
+    margin-top: -889px;
+    margin-left: -130px;
+}
+.ldl .warning-crawl .title {
+    font-family: "AKZID Bold";
+    z-index: 95;
+    position: absolute;
+    width: 1620px;
+    font-size: 39px;
+    top: 881px;
+    padding-left: 171px;
+    font-weight: 500;
+    letter-spacing: 0.75px;
+    text-shadow: 2px 2px #000;
+}
+.ldl .warning-crawl .marquee .js-marquee {
+    font-family: 'Helvetica Neue';
+    position: absolute;
+    white-space: nowrap;
+    font-size: 60px;
+    margin-top: 940px;
+    text-shadow: 1.5px 1.5px black;
+}.ldl .upper-text {
+    font-family: 'Akzidenz Md Ex';
+    position: absolute;
+    font-size: 44px;
+    letter-spacing: -2px;
+    word-spacing: 15px;
+    white-space: nowrap;
+    margin-top: -2px;
+    margin-left: -3px;
+}
+.ldl .lower-text {
+    display: flex;
+    margin-top: 38px;
+    margin-left: -5px;
+    white-space: nowrap;
+    width: 500px;
+}
+.ldl .lower-text .cc {
+    font-family: 'AG Bold Ex';
+    font-size: 48px;
+    white-space: nowrap;
+    letter-spacing: -2px;
+}
+.ldl .lower-text .label {
+    font-family: 'AKZID Md Ex';
+    font-size: 54px;
+    letter-spacing: -4px;
+    text-align: left;
+}
+.ldl .lower-text .cond {
+    font-family: 'AG Bold Ex';
+    font-size: 54px;
+    margin-top: -2px;
+    white-space: nowrap;
+    letter-spacing: -2px;
+    padding-left: 47px;
+}
+.ldl .lower-text.right {
+    margin-left: 618px;
+    margin-top: -70px;
+}
+.ldl .crawl {
+    position: absolute;
+    font-size: 60px;
+    white-space: nowrap;
+    overflow: hidden;
+    width: 1440px;
+    margin-left: -130px;
+}
+.ldl .crawl .js-marquee {
+    font-family: 'Helvetica Neue';
+}
+
+.date-time {
+    font-family: 'AKZID Md Ex';
+    text-align: right;
+    position: absolute;
+    color: #e8e9e9;
+    font-size: 36px;
+    z-index: 10;
+    right: 445px;
+    margin-top: 169px;
+    filter: drop-shadow(2px 2px #000);
+    letter-spacing: 0px;
+    -webkit-text-stroke: 0.4px #000;
+}
+#time {
+    right: 121px;
+    letter-spacing: -1px;
+}

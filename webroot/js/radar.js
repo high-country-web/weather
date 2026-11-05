@@ -16,10 +16,7 @@ var mapStyle = 'mapbox://styles/colster/cmiccqynn00as01s4bt6501il';
 
 async function createMaps() {
   mapboxgl.accessToken = map_key;
-  var radarCoords = [
-    !locationConfig.mainCity.lon || !locationConfig.mainCity.lat ? 0 : locationConfig.mainCity.lon,
-    !locationConfig.mainCity.lat || !locationConfig.mainCity.lon ? 0 : locationConfig.mainCity.lat,
-  ];
+  var radarCoords = [locationConfig.mainCity.lon, locationConfig.mainCity.lat];
   regradar = new mapboxgl.Map({
     container: 'regradar',
     projection: 'mercator',

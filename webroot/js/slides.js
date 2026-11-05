@@ -43,7 +43,7 @@ async function slideCallBack() {
   if (idx >= slideFlavor.order.length) {
     if (window.reportBooneSlide) window.reportBooneSlide('cycle');
     console.info('[Boone slides] Cycle complete; refreshing weather');
-    await grabData();
+    void grabData();
     idx = 0;
   }
   nidx = (idx + 1) % slideFlavor.order.length;

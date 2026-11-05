@@ -142,7 +142,7 @@ var locationSettings = {
   },
 };
 
-// This installation has a fixed location and a Boone-only slide lineup.
+// Keep the slides focused on the viewer's selected city.
 slideSettings.auto = false;
 slideSettings.order = slideSettings.order.filter(
   (s) => !['mapCurrent', 'mapForecast'].includes(s.function),

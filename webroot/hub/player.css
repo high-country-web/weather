@@ -1,0 +1,66 @@
+#settings-menu,
+#settings-menu-content,
+#settingspanel,
+#json-load {
+  display: none !important;
+}
+#hub-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: grid;
+  place-content: center;
+  gap: 24px;
+  background: #09294b;
+  color: white;
+  font:
+    24px system-ui,
+    sans-serif;
+  text-align: center;
+}
+#hub-loading .spinner {
+  width: 44px;
+  height: 44px;
+  margin: auto;
+  border: 4px solid #ffffff35;
+  border-top-color: #f0c66b;
+  border-radius: 50%;
+  animation: hub-spin 1s linear infinite;
+}
+#hub-loading p {
+  margin: 0;
+}
+#hub-loading small {
+  font-size: 14px;
+  color: #b8cddd;
+}
+#hub-back {
+  position: fixed;
+  left: 14px;
+  top: 14px;
+  z-index: 1000000;
+  color: #fff;
+  background: #081c30dd;
+  border: 1px solid #ffffff40;
+  border-radius: 6px;
+  padding: 8px 12px;
+  text-decoration: none;
+  font:
+    14px system-ui,
+    sans-serif;
+  opacity: 0.35;
+}
+#hub-back:hover,
+#hub-back:focus-visible {
+  opacity: 1;
+}
+@keyframes hub-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #hub-loading .spinner {
+    animation-duration: 3s;
+  }
+}

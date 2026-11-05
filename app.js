@@ -17,6 +17,13 @@ if (
   );
 }
 const app = express();
+const playerSlugs = [
+  'intellistar-1',
+  'weatherstar-xl',
+  'weatherscan-local',
+  'weatherscan-v1',
+  'weatherscan-v2',
+];
 // Log paths and status only: query strings, headers, bodies, and error objects
 // can contain credentials and must never be written to the terminal.
 function serverLog(level, message) {
@@ -28,19 +35,19 @@ function serverLog(level, message) {
   }
   console[level](`${new Date().toISOString()} ${message}`);
 }
-function shouldLogRequest(pathname) {
-  const isTileRequest = pathname.startsWith('/api/weather/v3/TileServer/');
-  const isViewEvent = pathname === '/api/view-events';
-  const isPageRequest = pathname === '/' || pathname === '/index.html';
-  const isApiRequest = pathname.startsWith('/api/');
-
-  return !isTileRequest && !isViewEvent && (isPageRequest || isApiRequest);
-}
-
 app.use((req, res, next) => {
   const started = performance.now();
   const pathname = req.path;
-  if (!shouldLogRequest(pathname)) return next();
+  // Asset and radar traffic is high volume; keep it out of terminal logs.
+  if (
+    pathname.startsWith('/api/weather/v3/TileServer/') ||
+    pathname === '/api/view-events' ||
+    (pathname !== '/' &&
+      pathname !== '/index.html' &&
+      !playerSlugs.some((slug) => pathname === `/${slug}` || pathname === `/${slug}/`) &&
+      !pathname.startsWith('/api/'))
+  )
+    return next();
   const category = pathname.startsWith('/api/weather')
     ? 'weather'
     : pathname.startsWith('/api/')
@@ -59,8 +66,12 @@ app.use((req, res, next) => {
   next();
 });
 const allowedPaths = new Set([
+  '/v3/location/search',
   '/v3/wx/observations/current',
   '/v3/wx/forecast/daily/7day',
+  '/v3/wx/forecast/daily/3day',
+  '/v3/wx/forecast/daily/5day',
+  '/v3/wx/almanac/daily/5day',
   '/v3/wx/forecast/hourly/1day',
   '/v3/wx/forecast/hourly/2day',
   '/v3/wx/globalAirQuality',
@@ -83,6 +94,8 @@ const allowedParams = new Set([
   'filter',
   'ts',
   'xyz',
+  'query',
+  'locationType',
 ]);
 const slideNames = new Set([
   'currentConditions',
@@ -96,10 +109,16 @@ const slideNames = new Set([
   'almanac',
   'bulletin',
   'outdoorActivity',
+  'upNext',
+  'cityIntro',
+  'extendedForecast',
+  'dayPart',
+  'dayDesc',
 ]);
 // Only bounded, known fields can reach logs; never log client-supplied text.
 app.post('/api/view-events', express.json({ limit: '1kb' }), (req, res) => {
-  const { viewId, event, slide, position, total } = req.body || {};
+  const { viewId, event, slide, position, total, player } = req.body || {};
+  const playerLabel = playerSlugs.includes(player) ? ` (${player})` : '';
   if (
     typeof viewId !== 'string' ||
     !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(viewId)
@@ -114,7 +133,7 @@ app.post('/api/view-events', express.json({ limit: '1kb' }), (req, res) => {
     position <= total &&
     total <= 100
   ) {
-    serverLog('info', `[Boone slides] View ${viewId}: ${position}/${total} ${slide}`);
+    serverLog('info', `[Boone slides] View ${viewId}${playerLabel}: ${position}/${total} ${slide}`);
   } else if (
     event === 'radar-disabled' &&
     ['mobile', 'unsupported', 'no-token', 'initialization-failed'].includes(slide)
@@ -124,7 +143,10 @@ app.post('/api/view-events', express.json({ limit: '1kb' }), (req, res) => {
       `[Boone viewer] View ${viewId}: radar disabled (${slide}); using weather slides`,
     );
   } else if (event === 'cycle') {
-    serverLog('info', `[Boone slides] View ${viewId}: cycle complete; refreshing weather`);
+    serverLog(
+      'info',
+      `[Boone slides] View ${viewId}${playerLabel}: cycle complete; refreshing weather`,
+    );
   } else return res.sendStatus(400);
   res.sendStatus(204);
 });
@@ -143,10 +165,33 @@ app.use('/api/weather', async (req, res) => {
   if (req.method !== 'GET') return res.sendStatus(405);
   const incoming = new URL(req.url, 'http://localhost');
   const tileRequest = incoming.pathname.startsWith('/v3/TileServer/');
-  if (!allowedPaths.has(incoming.pathname)) return res.sendStatus(404);
+  const v1Observation =
+    /^\/v1\/geocode\/(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)\/observations\/current\.json$/.exec(
+      incoming.pathname,
+    );
+  if (!allowedPaths.has(incoming.pathname) && !v1Observation) return res.sendStatus(404);
   for (const key of incoming.searchParams.keys()) {
     if (!allowedParams.has(key)) return res.status(400).json({ error: 'Unsupported parameter' });
   }
+  const validCoordinates = (lat, lon) =>
+    Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
+  if (v1Observation && !validCoordinates(Number(v1Observation[1]), Number(v1Observation[2])))
+    return res.sendStatus(400);
+  if (incoming.searchParams.has('geocode')) {
+    const coordinates = incoming.searchParams.get('geocode');
+    if (
+      !/^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/.test(coordinates) ||
+      !validCoordinates(...coordinates.split(',').map(Number))
+    )
+      return res.sendStatus(400);
+  }
+  const locationSearch = incoming.pathname === '/v3/location/search';
+  if (locationSearch) {
+    const query = incoming.searchParams.get('query') || '';
+    if (query.trim().length < 2 || query.length > 100 || /[\x00-\x1f]/.test(query))
+      return res.sendStatus(400);
+  } else if (incoming.searchParams.has('query') || incoming.searchParams.has('locationType'))
+    return res.sendStatus(400);
   const secret = process.env.WEATHER_API_KEY;
   if (!secret) {
     if (!tileRequest)
@@ -155,12 +200,20 @@ app.use('/api/weather', async (req, res) => {
   }
   const upstream = new URL(incoming.pathname, 'https://api.weather.com');
   upstream.search = incoming.search;
-  if (
-    !incoming.pathname.includes('TileServer') &&
+  if (locationSearch) {
+    upstream.searchParams.set('locationType', 'city');
+    upstream.searchParams.set('language', 'en-US');
+    upstream.searchParams.set('format', 'json');
+    upstream.searchParams.delete('geocode');
+  } else if (
+    !tileRequest &&
     !incoming.pathname.includes('/alerts/detail') &&
     !incoming.pathname.startsWith('/v1/')
   ) {
-    upstream.searchParams.set('geocode', '36.2168,-81.6746');
+    upstream.searchParams.set(
+      'geocode',
+      incoming.searchParams.get('geocode') || '36.2168,-81.6746',
+    );
   }
   upstream.searchParams.set('apiKey', secret);
   if (!tileRequest) serverLog('info', `[Boone weather] Upstream request: ${incoming.pathname}`);
@@ -191,7 +244,17 @@ app.use('/api/weather', async (req, res) => {
     res.status(502).json({ error: 'Weather service unavailable' });
   }
 });
-app.use(express.static(publicRoot, { dotfiles: 'deny' }));
+app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(publicRoot, 'hub/index.html')));
+for (const slug of playerSlugs) {
+  const directory = slug === 'intellistar-1' ? publicRoot : path.join(publicRoot, 'players', slug);
+  // An explicit base in each document keeps relative image, font, and audio paths
+  // valid with or without a trailing slash, including bookmarked player links.
+  app.get([`/${slug}`, `/${slug}/`], (req, res) =>
+    res.sendFile(path.join(directory, 'index.html')),
+  );
+  app.use(`/${slug}`, express.static(directory, { dotfiles: 'deny', index: false }));
+}
+app.use(express.static(publicRoot, { dotfiles: 'deny', index: false }));
 if (require.main === module) {
   const port = Number(process.env.PORT || 8080);
   serverLog(

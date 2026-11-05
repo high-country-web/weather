@@ -1,11 +1,15 @@
 Make sure to report any bugs or issues in the Issues tab!
 
+= NOVEMBER 4, 2026 | HIGH COUNTRY WEATHER COLLECTION =
+ -  Brought together five original Mist Weather Media simulators with a shared player gallery and individual player URLs.
+ -  Added shared viewer city selection across the collection.
+
 = NOVEMBER 3, 2026 | BOONE FORK UPDATE =
- -  Customized the weather display for Boone, North Carolina.
+ -  Defaulted weather to Boone, North Carolina, with saved viewer city selection.
  -  Added automatic startup with an animated loading screen.
- -  Added continuous slide playback with weather refreshed each cycle.
+ -  Added continuous slide playback, background weather refresh, connection recovery, and freshness status.
+ -  Added audio consent, separate music/narration controls, and saved preferences.
  -  Added private server-side API configuration and a placeholder environment file.
- -  Added Express console diagnostics for site viewing and slide playback.
  -  Added a minified production build and production server mode.
  -  Added a mobile-friendly startup fallback.
 

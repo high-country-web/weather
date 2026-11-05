@@ -23,20 +23,37 @@ function skipRadar(reason) {
   if (window.reportBooneSlide) window.reportBooneSlide('radar-disabled', reason);
 }
 
+async function loadViewerConfig() {
+  let delay = 15000;
+  for (;;) {
+    try {
+      const response = await fetch('/api/config', { signal: AbortSignal.timeout(15000) });
+      if (!response.ok) throw new Error('Configuration unavailable');
+      return await response.json();
+    } catch (_) {
+      console.warn('[Boone startup] Server unavailable; retrying automatically');
+      document.querySelector('#startup span').textContent =
+        `Loading ${locationConfig.mainCity.displayname} weather… Connecting to server; retrying automatically.`;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      delay = Math.min(delay * 2, 60000);
+    }
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
+  document.querySelector('#startup span').textContent =
+    `Loading ${locationConfig.mainCity.displayname} weather…`;
   console.info('[Boone startup] Starting');
   let stage = 'configuration';
   $.ajaxSetup({ timeout: 15000 });
   try {
-    const response = await fetch('/api/config');
-    if (!response.ok) throw new Error('Configuration unavailable');
-    const config = await response.json();
+    const config = await loadViewerConfig();
     if (!config.weatherConfigured)
       throw new Error('Add WEATHER_API_KEY to the private .env file and restart the server.');
     if (window.setBooneViewId) window.setBooneViewId(config.viewId);
     console.info('[Boone startup] Configuration ready');
     map_key = config.mapboxPublicToken;
-    const radarReason = map_key ? radarUnavailableReason() : 'no-token';
+    let radarReason = map_key ? radarUnavailableReason() : 'no-token';
     if (radarReason) skipRadar(radarReason);
     inSettings = false;
     versionsChanger(appearanceSettings.graphicsPackage);
@@ -60,14 +77,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     startLoops();
     document.getElementById('startup').remove();
     console.info('[Boone startup] Ready');
-    // Browsers may require a click before permitting sound.
-    try {
-      audioPlayer.startPlaying(audioPlayer.playlist, true);
-    } catch (_) {}
+    document.getElementById('viewer-toolbar').hidden = false;
+    if (audioSettings.enableMusic || audioSettings.narrations) {
+      document
+        .getElementById('enable-sound')
+        .addEventListener('click', () => audioPlayer.enableSound());
+      document
+        .getElementById('dismiss-sound')
+        .addEventListener('click', () => audioPlayer.continueSilently());
+      if (audioPlayer.preferences.choice === 'enabled' && !audioPlayer.preferences.muted)
+        audioPlayer.enableSound();
+      else if (audioPlayer.preferences.choice === 'ask') audioPlayer.showSoundPrompt();
+    }
   } catch (error) {
     console.error(`[Boone startup] Failed during ${stage} (${error.name || 'Error'})`);
     document.querySelector('#startup span').textContent =
-      `Unable to start Boone weather during ${stage}: ${error.message}`;
+      `Unable to start ${locationConfig.mainCity.displayname} weather during ${stage}: ${error.message}`;
     document.querySelector('#startup .spinner').hidden = true;
   }
 });

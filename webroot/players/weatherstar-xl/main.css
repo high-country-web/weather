@@ -1,0 +1,534 @@
+@font-face {
+    font-family: "Akzidenz Bold";
+    src: url(/xlfonts/AkzidenzGroteskBE-Bold.ttf);
+}
+
+@font-face {
+    font-family: 'Akzidenz Cn';
+    src: url(/xlfonts/AkzidenzGroteskBE-Cn.ttf);
+}
+
+@font-face {
+    font-family: 'Akzidenz Md';
+    src: url(/xlfonts/AkzidenzGroteskBE-Md.otf);
+}
+
+@font-face {
+    font-family: 'Akzidenz Tabular Cn';
+    src: url(/xlfonts/AkzidenzTabularBE-Cn.ttf);
+}
+
+@font-face {
+    font-family: 'Akzidenz Radar';
+    src: url(/xlfonts/Akzidenz_Radar.ttf);
+}
+
+@font-face {
+    font-family: 'AKZID Bold';
+    src: url(/xlfonts/AKZID_SmallCaps_Bold_15thin.ttf);
+}
+
+@font-face {
+    font-family: 'AKZID Md Ex';
+    src: url(/xlfonts/AKZID_SmallCaps_MdEx.ttf);
+}
+
+@font-face {
+    font-family: 'AG Bold Ex';
+    src: url(/xlfonts/AG-BoldEx_degree_spaced.ttf);
+}
+
+@font-face {
+    font-family: 'AG Bold Radar';
+    src: url(/xlfonts/AG_Bold_NewRadar.ttf);
+}
+
+@font-face {
+    font-family: 'Warning';
+    src: url(/xlfonts/WarningFont_1.ttf);
+}
+
+@font-face {
+    font-family: 'Akzidenz Md Ex';
+    src: url(/xlfonts/AkzidenzGroteskBEMediumExtended.otf);
+}
+
+@font-face {
+    font-family: 'Helvetica Neue';
+    src: url(/xlfonts/HelveticaNeueLT-BoldCond.otf);
+}
+
+a, body, div, h1, html, p {
+    margin: 0;
+    padding: 0;
+    font-family: "Akzidenz Bold", Arial, Helvetica;
+    letter-spacing: 1px;
+    color: #d4d4d4;
+    font-style: normal;
+    -webkit-font-smoothing: subpixel-antialiased;
+}
+
+html * {
+    box-sizing: border-box;
+    font-size: 100%
+}
+
+body, html {
+    height: 100%;
+    background-color: #000;
+    font-size: 100%
+}
+
+#settings-menu, #main {
+    pointer-events: none;
+}
+#settings-menu .bg {
+    filter: blur(4px);
+    background-size: 100% 100% !important;
+}
+#settings-menu-content, #song-settings, #version-settings, #location-settings {
+    position: absolute;
+    width: 1000px;
+    height: 500px;
+    background-color: rgba(0, 0, 0, 50%);
+    border: 10px solid #000;
+    border-radius: 20px;
+    transform: translate(0%, 0%);
+    will-change: transform;
+    pointer-events: all;
+    left: 50%;
+    top: 50%;
+}
+#location-settings {
+    height: 1000px;
+    width: 1200px;
+}
+#settings-menu .xllogo {
+    position: absolute;
+    height: 90px;
+    left: 405px;
+    top: 165px;
+    filter: drop-shadow(2px 2px 5px #000);
+}
+#settings-menu-content button, #song-settings button, #version-settings button, #location-settings button {
+    position: absolute;
+    font-family: "AG Bold Ex";
+    color: #debd69;
+    background-color: #232731;
+    pointer-events: auto !important;
+}
+#settings-menu-content button:hover, #song-settings button:hover, #version-settings button:hover, #location-settings button:hover {
+    background-color: #323741;
+    color: #d4d4d4;
+    cursor: pointer;
+}
+.aspectratio, .locname, .locdisplayname, .flavortype, .ldltype, .songchoice, .songback, .offsetlabel, .uploadsonglabel,
+.maincity, .maincitydisplayname, .extrcity, .extrcitydisplayname, .extracitiesheader, .maincityextraname {
+    font-family: "AG Bold Ex";
+    position: absolute;
+    font-size: 30px;
+    text-shadow: 2px 2px #000;
+    margin-left: 10.8%;
+}
+.aspectratio {
+    margin-top: 150px;
+}
+.locname {
+    margin-top:30px;
+}
+.locdisplayname {
+    margin-top: 30px;
+    margin-left: 453px;
+    width: 540px;
+}
+.flavortype {
+    margin-top: 210px;
+}
+.ldltype {
+    margin-top: 270px;
+}
+.input {
+    font-family: "Akzidenz Bold";
+    position: absolute;
+    margin-left: 110px;
+    margin-top: 80px;
+    width: 330px;
+    height: 40px;
+    z-index: 10000;
+    font-size: 24px;
+}
+#loclookup2, .extralookups,
+#locextraname {
+    margin-left: 200px;
+}
+.locsearch, .locsearch2,
+.extrasearch, .locextranamesubmit {
+    margin-top: 80px;
+    margin-left: 555px;
+    width: 100px;
+    height: 40px;
+    z-index: 10000;
+}
+.locsearch {
+    margin-left: 460px;
+}
+.locwarning, .locsuccess,
+.locwarning2, .locsuccess2,
+.locwarning3, .locsuccess3,
+.extralocationfail, .extralocationsuccess {
+    position: absolute;
+    text-shadow: 2px 2px #000;
+    margin-top: 125px;
+    margin-left: 630px;
+    font-size: 22px;
+}
+.locwarning, .locwarning2, .locwarning3, .extralocationfail { 
+    color:red;
+}
+.locsuccess, .locsuccess2, .locsuccess3, .extralocationsuccess {
+    color: green;
+}
+.asp {
+    position: absolute;
+    font-size: 30px;
+    margin-top: 148px;
+    margin-left: 410px;
+    width: 100px;
+    height: 45px;
+    z-index: 9999;
+}
+.asp.three-two-button {
+    margin-left: 510px;
+}
+.flv {
+    position: absolute;
+    font-size: 30px;
+    width: 215px;
+    margin-top: 208px;
+    margin-left: 270px;
+    height: 45px;
+    z-index: 1000;
+}
+.flv.ninetysec-button {
+    margin-left: 485px;
+}
+.flv.twomin-button {
+    margin-left: 700px;
+}
+.ldlbut {
+    position: absolute;
+    font-size: 30px;
+    width: 300px;
+    margin-top: 268px;
+    margin-left: 210px;
+    height: 45px;
+    z-index: 1000;
+}
+.ldlbut.crawl-button {
+    margin-left: 510px;
+    width: 160px;
+}
+.ldlbut.both-button {
+    margin-left: 670px;
+    width: 160px;
+}
+.ldlwarning, .offsetwarning {
+    position: absolute;
+    text-shadow: 2px 2px #000;
+    margin-top: 320px;
+    margin-left: 540px;
+    color: gold;
+    width: 270px;
+}
+.offsetwarning {
+    margin-top: 150px;
+    margin-left: 350px;
+    width: 450px;
+}
+.songchoice {
+    margin-left: 10.8%;
+    margin-top: 75px;
+}
+#songinput {
+    position: absolute;
+    margin-top: 75px;
+    font-family: 'Akzidenz Bold';
+    font-size: 22px;
+    width: 240px;
+    margin-left: 242px;
+    z-index: 1000;
+    height: 38px;
+}
+#songoffset {
+    font-family: "Akzidenz Bold";
+    position: absolute;
+    margin-left: 267px;
+    margin-top: 150px;
+    width: 64px;
+    height: 40px;
+    z-index: 10000;
+    font-size: 30px;
+    text-align: center;
+}
+.offsetlabel {
+    margin-left: 10.8%;
+    margin-top: 150px;
+}
+.uploadsonglabel {
+    margin-left: 10.8%;
+    margin-top: 225px;
+}
+.songbutton, #songuploadinput, .versionsbutton,
+.locsave, .locsavecookies, .locsavejson, .locloadcookies,
+.locloadconfig {
+    position: absolute;
+    font-size: 30px;
+    width: 300px;
+    margin-top: 402.5px;
+    margin-left: 30px;
+    height: 45px;
+    z-index: 1000;
+}
+.v1button, .v2button, .v3button {
+    position: absolute;
+    font-size: 30px;
+    width: 270px;
+    margin-top: 300px;
+    margin-left: 30px;
+    height: 45px;
+    z-index: 1000;
+}
+.v2button {
+    margin-left: 360px;
+}
+.v3button {
+    margin-left: 690px;
+}
+.v1pic, .v2pic, .v3pic {
+    position: absolute;
+    width: 270px;
+    height: 180px;
+    background-size: 100% 100%;
+    margin-left: 30px;
+    margin-top: 80px;
+    border-radius: 10px;
+    filter: drop-shadow(2px 4px 6px #000);
+}
+.v1pic {
+    background-image: url(images/v1/domestic.png);
+}
+.v2pic {
+    background-image: url(images/v2/domestic.png);
+    margin-left: 360px;
+}
+.v3pic {
+    background-image: url(images/v3/domestic.png);
+    margin-left: 690px;
+}
+.v1pic:hover, .v2pic:hover, .v3pic:hover {
+    filter: drop-shadow(2px 4px 6px #304976);
+}
+.versionsbutton {
+    margin-left: 650px;
+}
+#songuploadinput {
+    margin-top: 225px;
+    margin-left: 410px;
+    width: 600px;
+}
+.advlocsettings {
+    position: absolute;
+    font-size: 24px;
+    margin-top: 80px;
+    margin-left: 580px;
+    height: 40px;
+}
+.start-button {
+    position: absolute;
+    width: 240px;
+    height: 70px;
+    z-index: 9999;
+    font-size: 48px;
+    margin-left: 370px;
+    margin-top: 390px;
+}
+#promo {
+    position: absolute;
+    font-family: "Akzidenz Md";
+    margin-top: 580px;
+    font-size: 48px;
+    text-shadow: 2px 2px black;
+    margin-left: -15px;
+}
+#promoii {    
+    position: absolute;
+    font-family: "Akzidenz Md";
+    margin-top: 580px;
+    font-size: 48px;
+    text-shadow: 2px 2px black;
+    margin-left: 395px;
+}
+.jwx {
+    background-image: url(images/jwx.svg);
+    background-size: cover;
+    height: 80px;
+    width: 150px;
+    margin-top: 560px;
+    margin-left: 247px;
+}
+.mistpromo {
+    background-image: url(images/mistlogo2025.png);
+    background-size: cover;
+    height: 100px;
+    width: 200px;
+    margin-left: 817px;
+    margin-top: -80px;
+    filter: drop-shadow(2px 2px 5px #000);
+}
+.mistpromo a, .jwx a {
+    display: block;
+    height: inherit;
+    opacity: 0;
+}
+#settings-menu .version {
+    font-family: 'Helvetica Neue';
+    position: absolute;
+    font-size: 36px;
+    text-shadow: 2px 2px #000;
+    top: 20px;
+    left: 20px;
+    z-index: 99999;
+}
+.songback, .versionback, .locationback {
+    position: absolute;
+    width: 240px;
+    height: 70px;
+    z-index: 9999;
+    font-size: 48px;
+    margin-left: 370px;
+    margin-top: 390px;
+}
+.locationback {
+    margin-top: 890px;
+    margin-left: 470px;
+}
+.versionwarning {
+    position: absolute;
+    margin-left: 55px;
+    margin-top: 347px;
+    color: gold;
+    text-shadow: 2px 2px #000;
+    font-size: 24px;
+}
+.maincitydisplayname {
+    position: absolute;
+    margin-top: 30px;
+    margin-left: 430px;
+}
+.locwarning2, .locsuccess2 {
+    margin-top: 40px;
+    margin-left: 500px;
+}
+.extralocationfail, .extralocationsuccess {
+    margin-top: 660px;
+    font-size: 25px;
+    width: 1200px;
+    text-align: center;
+    margin-left: 0;
+}
+.extracities {
+    margin-top: 100px;
+}
+.extracitiesheader, .maincity {
+    margin-top: 130px;
+    font-size: 48px;
+    color: #debd69;
+}
+.maincity {
+    position: absolute;
+    margin-top: 26px;
+}
+.extracity {
+    position: absolute;
+    width: 500px;
+}
+.extracity.i {
+    margin-top: 135px;
+}
+.extracity.ii {
+    margin-top: 180px;
+}
+.extracity.iii {
+    margin-top: 225px;
+}
+.extracity.iv {
+    margin-top: 270px;
+}
+.extracity.v {
+    margin-top: 315px;
+}
+.extracity.vi {
+    margin-top: 360px;
+}
+.extracity.vii {
+    margin-top: 405px;
+}
+.extracity.viii {
+    margin-top: 450px;
+}
+.extrcity, .extrcitydisplayname {
+    margin-top: 30px;
+    margin-left: 206px;
+    width: 500px;
+}
+.extrcitydisplayname, .maincitydisplayname {
+    margin-left: 675px;
+    margin-top: 80px;
+}
+.locsave, .locsavecookies, .locsavejson, .locloadcookies, .locloadconfig {
+    width: 410px;
+}
+.locsave {
+    margin-top: 715px;
+}
+.locsavecookies {
+    margin-top: 765px;
+}
+.locsavejson {
+    margin-top: 815px;
+}
+.locloadcookies {
+    margin-top: 765px;
+    margin-left: 740px;
+}
+.locloadconfig {
+    margin-top: 815px;
+    margin-left: 740px;
+}
+#loclookup2, .locsearch2, .maincitydisplayname {
+    margin-top: 110px;
+}
+.locextranamesubmit {
+    margin-top: 165px;
+}
+#locloadconfiginput {
+    position: absolute;
+    width: 410px;
+    margin-left: -379px;
+}
+.displaynametip {
+    position: absolute;
+    font-family: "Akzidenz Md";
+    text-shadow: 2px 2px #000;
+    font-size: 32px;
+    width: 1150px;
+    text-align: center;
+    bottom: 222px;
+}
+.maincityextraname {
+    margin-left: 675px;
+    margin-top: 165px;
+}
+#locextraname {
+    margin-top: 165px;
+}

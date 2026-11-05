@@ -1,8 +1,31 @@
 <!doctype html>
 <html>
   <head>
+    <base href="/intellistar-1/" />
+    <style>
+      #player-home {
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 100000;
+        padding: 8px 12px;
+        color: white;
+        background: #081c30dd;
+        border: 1px solid #ffffff40;
+        border-radius: 6px;
+        font:
+          14px system-ui,
+          sans-serif;
+        text-decoration: none;
+        opacity: 0.35;
+      }
+      #player-home:hover,
+      #player-home:focus-visible {
+        opacity: 1;
+      }
+    </style>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>IntelliStar Simulator</title>
+    <title>IntelliStar 1 · High Country Weather</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="stylesheet" href="main.css" />
@@ -33,15 +56,158 @@
     <link rel="preload" as="image" href="images/Advisory.png" />
     <link rel="preload" as="image" href="images/Warning.png" />
 
+    <script async src="https://analytics.highcountryweb.dev/hk.js"></script>
     <script src="js/diagnostics.js"></script>
     <script src="js/utils/mapbox-gl.js"></script>
     <link href="js/utils/mapbox-gl.css" rel="stylesheet" />
     <script src="js/utils/maplibre-gl.js"></script>
     <link href="js/utils/maplibre-gl.css" rel="stylesheet" />
-    <link rel="stylesheet" href="css/startup.css" />
+    <style>
+      #settings-menu {
+        display: none !important;
+      }
+      #startup {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #09294b;
+        color: white;
+        font:
+          28px Arial,
+          sans-serif;
+      }
+      #startup .spinner {
+        width: 48px;
+        height: 48px;
+        border: 5px solid #ffffff40;
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 24px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
   </head>
 
   <body>
+    <a id="player-home" href="/">‹ Players &amp; city</a>
+    <section id="audio-permission" aria-label="Weather audio" hidden>
+      <p>Enable weather audio?</p>
+      <p>Allow music and narration by selecting Enable sound.</p>
+      <button id="enable-sound" type="button">Enable sound</button>
+      <button id="dismiss-sound" type="button">Continue without sound</button>
+    </section>
+    <aside id="viewer-toolbar" aria-label="Weather viewer controls" hidden>
+      <button
+        id="open-viewer-settings"
+        type="button"
+        aria-label="Settings"
+        aria-haspopup="dialog"
+        data-label="Settings"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path
+            d="m9 3-.5 2.2-1.6.9-2.2-.7-3 5.2 1.7 1.5v1.8l-1.7 1.5 3 5.2 2.2-.7 1.6.9L9 23h6l.5-2.2 1.6-.9 2.2.7 3-5.2-1.7-1.5v-1.8l1.7-1.5-3-5.2-2.2.7-1.6-.9L15 3Z"
+            transform="translate(1 0) scale(.92)"
+          />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      </button>
+      <button
+        id="open-viewer-about"
+        type="button"
+        aria-label="About"
+        aria-haspopup="dialog"
+        data-label="About"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 11v6M12 7v.1" />
+        </svg>
+      </button>
+    </aside>
+
+    <dialog
+      id="viewer-settings-dialog"
+      class="viewer-dialog"
+      aria-labelledby="viewer-settings-title"
+    >
+      <form method="dialog" class="viewer-dialog-header">
+        <h2 id="viewer-settings-title">Viewer settings</h2>
+        <button type="submit" aria-label="Close settings">Close</button>
+      </form>
+      <p id="weather-status" role="status" aria-live="polite">Waiting for current weather</p>
+      <section class="viewer-settings-section" aria-labelledby="location-settings-title">
+        <h3 id="location-settings-title">Location</h3>
+        <p id="selected-location">Boone, NC</p>
+        <form id="city-search">
+          <label for="city-query">Choose a town or city</label>
+          <input
+            id="city-query"
+            type="search"
+            placeholder="City, state or country"
+            minlength="2"
+            maxlength="100"
+            required
+          />
+          <button type="submit">Search</button>
+        </form>
+        <p id="city-search-status" role="status"></p>
+        <ul id="city-results"></ul>
+        <button id="reset-city" type="button">Use Boone, NC</button>
+      </section>
+      <section class="viewer-settings-section" aria-labelledby="sound-settings-title">
+        <h3 id="sound-settings-title">Sound</h3>
+        <button id="mute-audio" type="button">Enable sound</button>
+        <label for="music-volume">Music <output id="music-volume-value">80%</output></label>
+        <input id="music-volume" type="range" min="0" max="100" value="80" />
+        <label for="narration-volume"
+          >Narration <output id="narration-volume-value">100%</output></label
+        >
+        <input id="narration-volume" type="range" min="0" max="100" value="100" />
+      </section>
+    </dialog>
+
+    <dialog id="viewer-about-dialog" class="viewer-dialog" aria-labelledby="viewer-about-title">
+      <form method="dialog" class="viewer-dialog-header">
+        <h2 id="viewer-about-title">About this viewer</h2>
+        <button type="submit" aria-label="Close about">Close</button>
+      </form>
+      <p class="viewer-about-name">High Country Weather</p>
+      <p>
+        This viewer is based on the IntelliStar Simulator by Mist Weather Media, a recreation of The
+        Weather Channel's Local on the 8s. This fork starts with Boone, North Carolina, and adds
+        city selection, automatic playback, and weather recovery.
+      </p>
+      <div class="viewer-about-links">
+        <a
+          href="https://github.com/MistWeatherMedia/intellistar-1"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Original project on GitHub</a
+        >
+        <a href="https://i1.weatherstar.dev" target="_blank" rel="noopener noreferrer"
+          >Original online simulator</a
+        >
+        <a
+          href="https://github.com/high-country-web/weather"
+          target="_blank"
+          rel="noopener noreferrer"
+          >View this fork on GitHub</a
+        >
+      </div>
+      <p class="viewer-about-credit">
+        Original simulator © Mist Weather Media 2025. Licensed under GPL-3.0.
+      </p>
+    </dialog>
     <div id="startup" role="status">
       <div class="spinner" aria-hidden="true"></div>
       <span>Loading Boone weather…</span>
@@ -63,6 +229,7 @@
     <script type="text/javascript" src="js/vocallocal.js"></script>
     <script type="text/javascript" src="js/settings.js"></script>
     <script type="text/javascript" src="js/newlocation.js"></script>
+    <script type="text/javascript" src="js/viewer-controls.js"></script>
     <script type="text/javascript" src="js/weather.js"></script>
     <script type="text/javascript" src="js/radar.js"></script>
     <script type="text/javascript" src="js/ldl.js"></script>

@@ -35,8 +35,10 @@
       started.delete(xhr);
     });
   });
+})();
 
-  // Slides render in the browser; report lifecycle events to Express.
+// Slides are rendered in the browser; report only lifecycle events to Express.
+(() => {
   let viewId;
   let warned = false;
   window.setBooneViewId = (id) => {

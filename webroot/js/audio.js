@@ -1,26 +1,13 @@
-const SILENT_AUDIO =
-  'data:audio/wav;base64,UklGRnQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
-
 class AudioManager {
   constructor() {
     this.playlist = [];
     this.$players = $('<div id="players">');
-    // Honor the browser's actual playback decision, including existing permission.
-    this.blocked = false;
-    this.channels = {
-      music: this.createChannel('music'),
-      voice: this.createChannel('voice'),
-    };
-    this.soundButton = document.createElement('button');
-    this.soundButton.id = 'enable-sound';
-    this.soundButton.type = 'button';
-    this.soundButton.textContent = 'Enable sound';
-    this.soundButton.hidden = true;
-    this.soundButton.addEventListener('click', () => this.enableSound());
-    document.body.append(this.soundButton);
+    this.soundEnabled = false;
+    this.preferences = { music: 80, narration: 100, muted: false, choice: 'ask' };
+    this.loadPreferences();
     this.vocallocal = {
       cc: [],
-      lf: [`/vocallocal/DAYPART_DEFAULT1.wav`],
+      lf: ['/vocallocal/DAYPART_DEFAULT1.wav'],
       bl: [],
     };
 
@@ -28,13 +15,24 @@ class AudioManager {
 
     if (audioSettings.enableMusic) {
       this.buildPlaylist();
-      if (audioSettings.randomStart) {
-        this.shuffleStart();
+      if (audioSettings.randomStart) this.shuffleStart();
+      if (audioSettings.shuffle) shuffle(this.playlist);
+    }
+  }
+
+  loadPreferences() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('weather-audio') || 'null');
+      if (saved) {
+        for (const key of ['music', 'narration']) {
+          if (Number.isFinite(saved[key]))
+            this.preferences[key] = Math.max(0, Math.min(100, saved[key]));
+        }
+        this.preferences.muted = saved.muted === true;
+        if (['enabled', 'silent'].includes(saved.choice)) this.preferences.choice = saved.choice;
       }
-      if (audioSettings.shuffle) {
-        shuffle(this.playlist);
-      }
-      //this.startPlaying(this.playlist, true);
+    } catch (_) {
+      /* Storage is optional. */
     }
   }
 
@@ -42,6 +40,52 @@ class AudioManager {
     var firstHalf = this.playlist;
     var secondHalf = firstHalf.splice(Math.floor(Math.random() * firstHalf.length));
     this.playlist = [...secondHalf, ...firstHalf];
+  }
+
+  showSoundPrompt() {
+    const prompt = document.getElementById('audio-permission');
+    if (prompt) prompt.hidden = false;
+  }
+
+  enableSound() {
+    this.soundEnabled = true;
+    this.preferences.choice = 'enabled';
+    this.preferences.muted = false;
+    this.savePreferences();
+    document.getElementById('audio-permission').hidden = true;
+    // Resume the current music player directly inside the user's click.
+    // Discard old narration rather than replaying a previous slide.
+    this.$players.find('.voice').jPlayer('destroy').remove();
+    const $music = this.$players.find('.music.is-playing');
+    if ($music.length) $music.jPlayer('play');
+    else if (audioSettings.enableMusic) this.startPlaying(this.playlist, true);
+    this.applyVolumes();
+  }
+
+  savePreferences() {
+    try {
+      localStorage.setItem('weather-audio', JSON.stringify(this.preferences));
+    } catch (_) {}
+    this.applyVolumes();
+    if (window.updateAudioControls) window.updateAudioControls();
+  }
+
+  applyVolumes() {
+    const voiceActive = this.$players.find('.voice.is-playing').length > 0;
+    const music = (this.preferences.music / 100) * (voiceActive ? 0.375 : 1);
+    this.$players.find('.music').jPlayer('volume', this.preferences.muted ? 0 : music);
+    this.$players
+      .find('.voice')
+      .jPlayer('volume', this.preferences.muted ? 0 : this.preferences.narration / 100);
+  }
+
+  continueSilently() {
+    this.soundEnabled = false;
+    this.preferences.choice = 'silent';
+    this.preferences.muted = true;
+    this.$players.find('.jplayer').jPlayer('pause');
+    this.savePreferences();
+    document.getElementById('audio-permission').hidden = true;
   }
 
   playCC(vl) {
@@ -111,116 +155,119 @@ class AudioManager {
     }
   }
 
-  createChannel(type) {
-    const audio = document.createElement('audio');
-    audio.preload = 'auto';
-    audio.setAttribute('playsinline', '');
-    this.$players.append(audio);
-    const channel = { audio, type, tracks: [], index: 0, active: false, loop: false, failures: 0 };
-    audio.addEventListener('ended', () => {
-      if (!channel.active) return;
-      channel.failures = 0;
-      this.advance(channel);
-    });
-    audio.addEventListener('error', () => {
-      if (!channel.active) return;
-      console.warn(`[Boone audio] ${type} track unavailable`);
-      channel.failures++;
-      this.advance(channel);
-    });
-    audio.addEventListener('loadedmetadata', () => {
-      if (!channel.active || type !== 'music') return;
-      const offset = Math.abs(Number(audioSettings.offset) || 0);
-      if (Number.isFinite(audio.duration) && offset < audio.duration) audio.currentTime = offset;
-    });
-    return channel;
-  }
-
-  startPlaying(tracks, loop) {
-    const type = loop ? 'music' : 'voice';
-    if ((loop && !audioSettings.enableMusic) || (!loop && !audioSettings.narrations)) return;
-    const channel = this.channels[type];
-    if (!Array.isArray(tracks) || !tracks.length) return;
-    if (channel.active && (!this.blocked || type === 'music')) return;
-    channel.tracks = [...tracks];
-    channel.index = 0;
-    channel.loop = loop;
-    channel.failures = 0;
-    channel.active = true;
-    this.loadTrack(channel);
-  }
-
-  loadTrack(channel) {
-    channel.audio.src = channel.tracks[channel.index];
-    channel.audio.volume = channel.type === 'music' && !this.channels.voice.active ? 0.8 : 0.3;
-    if (channel.type === 'voice') {
-      channel.audio.volume = 1;
-      this.channels.music.audio.volume = 0.3;
-    }
-    if (this.blocked) {
-      this.soundButton.hidden = false;
-      return;
-    }
-    this.playChannel(channel);
-  }
-
-  playChannel(channel) {
-    try {
-      return Promise.resolve(channel.audio.play()).catch((error) => this.handlePlayError(error));
-    } catch (error) {
-      this.handlePlayError(error);
-      return Promise.resolve();
-    }
-  }
-
-  handlePlayError(error) {
-    if (error.name === 'AbortError') return;
+  handlePlaybackFailure(error) {
     if (error.name === 'NotAllowedError') {
-      if (!this.blocked) console.info('[Boone audio] Waiting for a tap to enable sound');
-      this.blocked = true;
-      this.soundButton.hidden = false;
-      // Subsequent slides queue normally, without retrying blocked playback.
-      for (const channel of Object.values(this.channels)) channel.audio.pause();
-    } else {
-      console.warn('[Boone audio] Playback unavailable');
+      this.soundEnabled = false;
+      this.showSoundPrompt();
+      if (window.updateAudioControls) window.updateAudioControls();
+    } else if (error.name !== 'AbortError') {
+      console.warn('[Boone audio] Unable to play audio');
     }
   }
 
-  enableSound() {
-    this.blocked = false;
-    this.soundButton.hidden = true;
-    // Both persistent elements must be played directly inside the tap handler.
-    for (const channel of Object.values(this.channels)) {
-      if (channel.active) {
-        this.playChannel(channel);
-      } else {
-        channel.audio.src = SILENT_AUDIO;
-        this.playChannel(channel).then(() => {
-          if (!channel.active) channel.audio.pause();
-        });
+  guardPlayerPlayback(media) {
+    // jPlayer predates play() promises. Handle policy failures without logging media URLs.
+    const nativePlay = media.play.bind(media);
+    media.play = () => {
+      try {
+        const playing = nativePlay();
+        if (playing && playing.catch) {
+          return playing.catch((error) => this.handlePlaybackFailure(error));
+        }
+        return playing;
+      } catch (error) {
+        this.handlePlaybackFailure(error);
       }
-    }
+    };
   }
 
-  advance(channel) {
-    channel.index++;
-    if (
-      channel.failures >= channel.tracks.length ||
-      (!channel.loop && channel.index >= channel.tracks.length)
-    ) {
-      channel.active = false;
-      channel.audio.pause();
-      if (channel.type === 'voice') this.channels.music.audio.volume = 0.8;
-      return;
-    }
-    channel.index %= channel.tracks.length;
-    this.loadTrack(channel);
+  startPlaying(arr, loop) {
+    if (!this.soundEnabled || !arr.length) return;
+    var audioType = loop ? 'music' : 'voice';
+    if (this.$players.find(`.${audioType}`).length > 0) return;
+
+    var current = -1;
+    const len = arr.length;
+
+    //functions built in with startPlaying
+    const initPlayer = (id, audioType) => {
+      var $div = $(`<div id="${audioType}-${id}" class="jplayer ${audioType}"></div>`);
+      $div.jPlayer({
+        volume: this.preferences.muted
+          ? 0
+          : this.preferences[audioType === 'music' ? 'music' : 'narration'] / 100,
+        swfPath: `${document.baseURI}jplayer`,
+        preload: 'auto',
+        ended: function () {
+          if (audioType === 'voice') {
+            setTimeout(() => {
+              playNext();
+            }, 50);
+          } else {
+            playNext();
+          }
+        },
+      });
+      this.$players.append($div);
+      this.guardPlayerPlayback($div.data('jPlayer').htmlElement.audio);
+      return $div;
+    };
+    var $player = initPlayer('p1', audioType);
+    var $preloader = initPlayer('p2', audioType);
+
+    const playNext = () => {
+      current = getNextIndex();
+
+      if (getNextIndex() === null) {
+        $preloader.off($.jPlayer.event.ended).on($.jPlayer.event.ended, () => {
+          $player.jPlayer('destroy').remove();
+          $preloader.jPlayer('destroy').remove();
+          this.applyVolumes();
+        });
+        switchAudio();
+      } else {
+        switchAudio();
+        preloadTrack(arr[getNextIndex()]);
+      }
+    };
+
+    const preloadTrack = (trackName) => {
+      try {
+        $preloader.jPlayer('setMedia', { mp3: trackName }).jPlayer('load');
+      } catch (e) {
+        setTimeout(() => preloadTrack(trackName), 500);
+      }
+    };
+
+    const getNextIndex = () => {
+      const nextIndex = current + 1;
+      if (nextIndex < len) {
+        return nextIndex;
+      } else {
+        return loop ? 0 : null;
+      }
+    };
+
+    const switchAudio = () => {
+      var tempAudio = $player;
+      var tempAudio2 = $preloader;
+      (($player = null), ($preloader = null));
+      $player = tempAudio2;
+      $preloader = tempAudio;
+      $preloader.removeClass('is-playing');
+      $player.addClass('is-playing');
+      this.applyVolumes();
+      const offset = audioType == 'music' ? Math.abs(audioSettings.offset) : 0;
+      if (offset) $player.jPlayer('play', offset);
+      else $player.jPlayer('play');
+    };
+
+    $preloader.jPlayer('setMedia', { mp3: arr[0] });
+    playNext();
   }
 
   stopPlaying() {
-    const channel = this.channels.music;
-    channel.audio.pause();
-    channel.active = false;
+    this.$players.find('.music').jPlayer('volume', 0);
   }
 }
 
