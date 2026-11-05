@@ -1,3 +1,16 @@
+function validViewerCity(city) {
+  return (
+    city &&
+    typeof city.displayname === 'string' &&
+    city.displayname.length > 0 &&
+    city.displayname.length <= 100 &&
+    Number.isFinite(Number(city.lat)) &&
+    Math.abs(Number(city.lat)) <= 90 &&
+    Number.isFinite(Number(city.lon)) &&
+    Math.abs(Number(city.lon)) <= 180
+  );
+}
+
 const audioVolumeInputs = [
   ['music', 'music-volume'],
   ['narration', 'narration-volume'],
@@ -22,7 +35,7 @@ function updateAudioControls() {
 }
 
 function selectWeatherCity(city) {
-  if (!validWeatherCity(city)) return;
+  if (!validViewerCity(city)) return;
   let saved = false;
   try {
     localStorage.setItem('weather-city', JSON.stringify(city));
@@ -43,6 +56,12 @@ function selectWeatherCity(city) {
 
 function initializeAudioControls() {
   updateAudioControls();
+  document
+    .getElementById('enable-sound')
+    .addEventListener('click', () => audioPlayer.enableSound());
+  document
+    .getElementById('dismiss-sound')
+    .addEventListener('click', () => audioPlayer.continueSilently());
   document.getElementById('mute-audio').addEventListener('click', () => {
     if (!audioPlayer.soundEnabled) audioPlayer.enableSound();
     else {
@@ -70,7 +89,7 @@ function renderCitySearchResults(locations, results) {
       state: locations.adminDistrictCode?.[i] || '',
       stateFull: locations.adminDistrict?.[i] || '',
     };
-    if (!validWeatherCity(city)) continue;
+    if (!validViewerCity(city)) continue;
 
     const item = document.createElement('li');
     const button = document.createElement('button');
@@ -104,7 +123,9 @@ async function fetchCitySearchResults(query, signal) {
 function initializeCitySearch() {
   document
     .getElementById('reset-city')
-    .addEventListener('click', () => selectWeatherCity(defaultWeatherCity));
+    .addEventListener('click', () =>
+      selectWeatherCity(window.weatherHub?.boone || defaultWeatherCity),
+    );
   let searchController;
   document.getElementById('city-search').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -161,11 +182,11 @@ function initializeViewerToolbar() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const city = locationConfig.mainCity;
+  const city = window.weatherHub?.city || locationConfig.mainCity;
   document.getElementById('selected-location').textContent = [city.displayname, city.state]
     .filter(Boolean)
     .join(', ');
-  document.title = `${city.displayname} Weather · IntelliSTAR`;
+  document.title = `${city.displayname} Weather · ${window.weatherViewer?.name || 'IntelliStar 1'}`;
 
   initializeAudioControls();
   initializeCitySearch();

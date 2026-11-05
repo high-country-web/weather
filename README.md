@@ -14,7 +14,7 @@ All five players originate from the Mist Weather Media organization:
 | Weatherscan v1 | `/weatherscan-v1` | [MistWeatherMedia/weatherscan-v1](https://github.com/MistWeatherMedia/weatherscan-v1) |
 | Weatherscan v2 | `/weatherscan-v2` | [MistWeatherMedia/weatherscan-v2](https://github.com/MistWeatherMedia/weatherscan-v2) |
 
-The root URL (`/`) opens the player gallery. The original IntelliStar viewer lives at `/intellistar-1`; its existing settings and sound controls remain available. The additional players retain their original graphics and run local forecast lineups through the shared Express weather service. Their optional radar, traffic, regional packages, music, and narration are not enabled by the shared adapter yet. Choose a city from the home page to use it across players. Imported player directories include their upstream revision and license in `UPSTREAM.md` and `LICENSE`.
+The root URL (`/`) opens the player gallery. The original IntelliStar viewer lives at `/intellistar-1`. All five players share its Settings and About buttons, city search, separate music/narration volume sliders, and mute control. The additional players retain their original graphics and run local forecast lineups through the shared Express weather service. Music and narration are enabled for every player using its own bundled recordings and music. Optional radar, traffic, and regional packages remain outside the imported local forecast lineups. Choose a city from the home page to use it across players. Imported player directories include their upstream revision and license in `UPSTREAM.md` and `LICENSE`.
 
 This collection does not claim authorship of the original simulators and is not affiliated with The Weather Channel.
 
@@ -37,7 +37,7 @@ Small gear (**Settings**) and info (**About**) icons sit in the bottom-right cor
 
 Open **Settings** to search by town/city, state, or country. Picking a result restarts the viewer with weather and radar centered on that place; normal slide cycles never reload. **Use Boone, NC** restores the default. City search uses the existing private Weather.com key; available locations and weather products depend on the provider's coverage and your key's access.
 
-The **Sound** section in Settings has separate music and narration volume sliders and a mute button. Choices are saved locally when browser storage is available. Returning viewers who previously enabled sound get an automatic playback attempt; if the browser blocks it, **Enable sound** requests a click/tap again. Choosing **Continue without sound** is remembered. Music lowers during narration and returns to the chosen level afterward.
+Every player has the same **Sound** section in Settings, with separate music and narration volume sliders and a mute button. Choices are saved locally and shared across players when browser storage is available. Playback attempts automatically unless the viewer chose **Continue without sound**. Only an actual browser playback rejection reveals **Enable sound**. Two persistent HTML audio elements are reused across tracks, narrations, and slide cycles, including when upstream startup code initializes audio again. Music lowers during narration and returns to the chosen level afterward. Each player resolves music and narration paths relative to its own URL.
 
 ## Requirements and setup
 

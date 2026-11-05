@@ -2,7 +2,7 @@ Make sure to report any bugs or issues in the Issues tab!
 
 = NOVEMBER 4, 2026 | HIGH COUNTRY WEATHER COLLECTION =
  -  Brought together five original Mist Weather Media simulators with a shared player gallery and individual player URLs.
- -  Added shared viewer city selection across the collection.
+ -  Added shared Settings and About controls, city selection, music, narration, volume sliders, and mute preferences across the collection.
 
 = NOVEMBER 3, 2026 | BOONE FORK UPDATE =
  -  Defaulted weather to Boone, North Carolina, with saved viewer city selection.

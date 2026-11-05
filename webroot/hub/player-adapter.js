@@ -8,11 +8,10 @@
   loading.innerHTML = '<div class="spinner"></div><p></p><small>High Country Weather</small>';
   loading.querySelector('p').textContent = `Loading ${city.displayname} weather…`;
   document.body.append(loading);
-  const back = document.createElement('a');
-  back.id = 'hub-back';
-  back.href = '/';
-  back.textContent = '‹ Players & city';
-  document.body.append(back);
+  const soundSettings =
+    typeof systemSettings === 'undefined' ? audioSettings : systemSettings.audioSettings;
+  soundSettings.enableMusic = true;
+  soundSettings.narrations = true;
   const localCity = { ...city, extraname: `${city.displayname} Area` };
   let viewId;
   function report(event, slide, position, total) {
@@ -27,6 +26,10 @@
     loading.remove();
     $('#startup').hide();
     $('#main').show();
+    document.getElementById('viewer-toolbar').hidden = false;
+    document.getElementById('weather-status').textContent =
+      'Weather requests finished at ' + new Date().toLocaleTimeString();
+    audioPlayer.initializeAudio();
   }
   function coreSlides(group) {
     const keep = new Set([
@@ -99,8 +102,8 @@
     settings.systemLocation = city.displayname;
     settings.packageSettings = ['forecast'];
     settings.appearanceSettings.adMessage = ['High Country Weather'];
-    settings.audioSettings.enableMusic = false;
-    settings.audioSettings.narrations = false;
+    settings.audioSettings.enableMusic = true;
+    settings.audioSettings.narrations = true;
     settings.nearbyCities = { autoFind: false, cities: [] };
     settings.extraCity = { ...settings.extraCity, autoFind: false, cities: [] };
     if (settings.upperDisplayCity)
@@ -139,6 +142,8 @@
     if (slug === 'weatherstar-xl') grabData();
     else await allData();
     await settle();
+    document.getElementById('weather-status').textContent =
+      'Weather requests finished at ' + new Date().toLocaleTimeString();
   }
   // Record each slide and refresh on a wrap without navigating the document.
   const originalShowSlides = showSlides;

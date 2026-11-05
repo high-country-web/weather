@@ -23,6 +23,23 @@ window.weatherHub = (() => {
   } catch {
     /* Storage can be unavailable in private browsing. */
   }
+  const params = new URLSearchParams(location.search);
+  if (params.has('city') && params.has('lat') && params.has('lon')) {
+    const candidate = {
+      displayname: params.get('city'),
+      lat: Number(params.get('lat')),
+      lon: Number(params.get('lon')),
+      state: params.get('state') || '',
+    };
+    if (
+      candidate.displayname.length <= 100 &&
+      Number.isFinite(candidate.lat) &&
+      Math.abs(candidate.lat) <= 90 &&
+      Number.isFinite(candidate.lon) &&
+      Math.abs(candidate.lon) <= 180
+    )
+      city = candidate;
+  }
   const pending = new Set();
   $.ajaxPrefilter((options, original, xhr) => {
     const url = new URL(options.url, location.href);

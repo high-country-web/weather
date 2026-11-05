@@ -1,0 +1,326 @@
+#audio-permission {
+  position: fixed;
+  right: 16px;
+  bottom: 64px;
+  z-index: 100000;
+  max-width: calc(100vw - 32px);
+  padding: 16px;
+  border: 1px solid #ffffff80;
+  border-radius: 8px;
+  background: #09294b;
+  color: white;
+  font:
+    16px/1.4 Arial,
+    sans-serif;
+  box-shadow: 0 4px 20px #0008;
+}
+#audio-permission[hidden] {
+  display: none;
+}
+#audio-permission p {
+  margin-bottom: 10px;
+  font: inherit;
+  color: white;
+}
+#audio-permission button {
+  margin: 4px 8px 0 0;
+  padding: 10px 14px;
+  border: 1px solid white;
+  border-radius: 4px;
+  background: white;
+  color: #09294b;
+  font: inherit;
+  cursor: pointer;
+}
+#audio-permission button:focus-visible {
+  outline: 3px solid #ffd75e;
+  outline-offset: 3px;
+}
+
+/* Viewer menu and dialogs */
+#viewer-toolbar {
+  position: fixed;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  right: max(8px, env(safe-area-inset-right));
+  z-index: 90000;
+  display: flex;
+  gap: 6px;
+  transition: opacity 180ms ease;
+}
+
+#viewer-toolbar.viewer-toolbar-idle {
+  opacity: 0;
+}
+
+#viewer-toolbar:hover,
+#viewer-toolbar:focus-within {
+  opacity: 1;
+}
+
+#viewer-toolbar[hidden] {
+  display: none;
+}
+
+#viewer-toolbar button,
+.viewer-dialog {
+  border: 1px solid #ffffff40;
+  border-radius: 10px;
+  background: #09294bf2;
+  color: #fff;
+  font:
+    14px/1.5 Arial,
+    sans-serif;
+  letter-spacing: normal;
+}
+
+#viewer-toolbar button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  border-radius: 50%;
+  background: #09294b80;
+  cursor: pointer;
+}
+
+#viewer-toolbar svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#viewer-toolbar button::after {
+  content: attr(data-label);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #09294b;
+  color: white;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#viewer-toolbar button:hover::after,
+#viewer-toolbar button:focus-visible::after {
+  opacity: 1;
+}
+
+@media (pointer: coarse) {
+  #viewer-toolbar button {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #viewer-toolbar {
+    transition: none;
+  }
+}
+
+#viewer-toolbar button:hover {
+  background: #16416c;
+}
+
+.viewer-dialog {
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 24px;
+  overflow-y: auto;
+  box-shadow: 0 12px 60px #0008;
+}
+
+.viewer-dialog::backdrop {
+  background: #0009;
+  backdrop-filter: blur(3px);
+}
+
+.viewer-dialog * {
+  font: inherit;
+  letter-spacing: normal;
+}
+
+.viewer-dialog p {
+  margin: 0 0 14px;
+  color: #e2ebf4;
+}
+
+.viewer-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.viewer-dialog-header h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.viewer-settings-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #ffffff30;
+}
+
+.viewer-settings-section h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+#weather-status[data-warning='true'] {
+  color: #ffd75e;
+}
+
+.viewer-dialog label {
+  display: block;
+  margin: 12px 0 5px;
+  color: white;
+}
+
+.viewer-dialog input {
+  width: 100%;
+  accent-color: #ffd75e;
+}
+
+.viewer-dialog input[type='search'] {
+  padding: 10px;
+  border: 1px solid #ffffff80;
+  border-radius: 4px;
+  color: #09294b;
+  background: white;
+}
+
+.viewer-dialog button {
+  margin: 8px 0;
+  padding: 9px 12px;
+  border: 1px solid #ffffff80;
+  border-radius: 4px;
+  background: #fff;
+  color: #09294b;
+  cursor: pointer;
+}
+
+.viewer-dialog-header button {
+  margin: 0;
+  padding: 6px 10px;
+  background: transparent;
+  color: white;
+}
+
+#viewer-toolbar :focus-visible,
+.viewer-dialog :focus-visible {
+  outline: 3px solid #ffd75e;
+  outline-offset: 3px;
+}
+
+#city-results {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#city-results button {
+  width: 100%;
+  text-align: left;
+}
+
+.viewer-dialog output {
+  float: right;
+  color: white;
+}
+
+.viewer-dialog .viewer-about-name {
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.viewer-about-links {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.viewer-about-links a {
+  color: #a9d7ff;
+  text-underline-offset: 3px;
+}
+
+.viewer-dialog .viewer-about-credit {
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid #ffffff30;
+  color: #b3c4d7;
+  font-size: 12px;
+}
+
+/* Simulator styles use broad selectors; keep shared controls independent. */
+#viewer-shell {
+  position: relative;
+  z-index: 1000001;
+}
+#viewer-shell,
+#viewer-shell * {
+  box-sizing: border-box;
+}
+#viewer-shell button {
+  pointer-events: auto;
+}
+#viewer-shell .viewer-dialog {
+  position: fixed;
+}
+#viewer-shell .viewer-dialog h2,
+#viewer-shell .viewer-dialog h3 {
+  position: static;
+  color: white;
+}
+#viewer-shell .viewer-dialog input {
+  position: static;
+  height: auto;
+  transform: none;
+}
+#viewer-shell .viewer-dialog input[type='range'] {
+  height: 24px;
+}
+#viewer-shell .viewer-dialog a {
+  position: static;
+}
+
+#player-home {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 100000;
+  padding: 8px 12px;
+  color: white;
+  background: #081c30dd;
+  border: 1px solid #ffffff40;
+  border-radius: 6px;
+  font:
+    14px system-ui,
+    sans-serif;
+  text-decoration: none;
+  opacity: 0.35;
+}
+#player-home:hover,
+#player-home:focus-visible {
+  opacity: 1;
+}
+
+#viewer-shell,
+#viewer-shell * {
+  text-shadow: none;
+}

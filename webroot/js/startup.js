@@ -78,17 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('startup').remove();
     console.info('[Boone startup] Ready');
     document.getElementById('viewer-toolbar').hidden = false;
-    if (audioSettings.enableMusic || audioSettings.narrations) {
-      document
-        .getElementById('enable-sound')
-        .addEventListener('click', () => audioPlayer.enableSound());
-      document
-        .getElementById('dismiss-sound')
-        .addEventListener('click', () => audioPlayer.continueSilently());
-      if (audioPlayer.preferences.choice === 'enabled' && !audioPlayer.preferences.muted)
-        audioPlayer.enableSound();
-      else if (audioPlayer.preferences.choice === 'ask') audioPlayer.showSoundPrompt();
-    }
+    audioPlayer.initializeAudio();
   } catch (error) {
     console.error(`[Boone startup] Failed during ${stage} (${error.name || 'Error'})`);
     document.querySelector('#startup span').textContent =

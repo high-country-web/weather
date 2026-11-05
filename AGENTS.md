@@ -16,3 +16,4 @@
 - Use the shared Prettier configuration for application code. Keep bundled vendor libraries and generated assets out of formatting changes.
 - Reuse persistent music/narration audio elements. Honor existing browser playback permission on all devices; show the sound button only after an actual NotAllowedError. Never force a sound prompt based on device type or repeatedly retry blocked autoplay.
 - Keep the production update command sequential: fast-forward pull from origin/main, install build dependencies, build, then start production; stop on failures.
+- All five player pages must share the IntelliStar-style Settings/About buttons, city selection, saved sound preferences, volume sliders, and mute controls. Enable each player's music and narration through persistent shared audio channels while retaining its own recordings and artwork.

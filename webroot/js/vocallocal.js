@@ -24,7 +24,7 @@ function vocallocalCC() {
 
     //failsafe
     if (temper === '/vocallocal/temp/.wav' || condit === '/vocallocal/cond/.wav') {
-      narrationArr = ['/vocallocal/narrations/Your_current_conditions.mp3'];
+      narrationArr = ['/vocallocal/CC_INTRO1.wav'];
       console.error('Could not find vocallocal files, reverted to normal');
     }
 
