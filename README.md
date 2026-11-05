@@ -57,6 +57,10 @@ The build recreates `dist/webroot`, minifies JavaScript and CSS, and copies imag
 
 For deployment, keep `app.js`, `package.json`, the installed production dependencies, and the complete generated `dist` directory, including `build-info.json`. Supply credentials separately at runtime. You may run `npm prune --omit=dev` after building; the build step itself needs development dependencies. HTML, images, fonts, audio, and the Express server are not minified by this build.
 
+### Update and start with one command
+
+From the deployment checkout on `main`, run `npm run deploy:prod` (or `node scripts/production.js`). The script runs `git pull --ff-only origin main`, `npm install --include=dev`, `npm run build`, and `npm run start:prod`, in that order. It stops on a failed step and leaves Express running in the foreground. Stop an existing server before using this command to avoid a port conflict. Development dependencies are included because the build needs esbuild. The update uses a fast-forward pull and will stop if Git cannot update without merging.
+
 ## Logs and troubleshooting
 
 The terminal running Express shows timestamped messages automatically:
@@ -75,7 +79,11 @@ Server logs exclude query strings, headers, response bodies, raw upstream errors
 - **Weather unavailable:** check the Express terminal for the upstream status or timeout; the next slide cycle retries weather requests.
 - **Font warnings:** a successful HTTP response means Express served the file; the browser may still reject its font data. Startup continues with fallback fonts.
 - **Mobile startup:** phones/tablets skip the desktop radar stack, which allocates eight WebGL maps. Weather slides continue; the Express console records `radar disabled (mobile)`. Browsers without supported WebGL also skip radar, and map initialization errors fall back to weather slides. This reduces a likely source of graphics-memory crashes; physical-device validation is still needed.
-- **No sound:** browser autoplay rules may require a user interaction before audio can play.
+- **Sound:** playback starts automatically when the browser permits it, including on iPad/iPhone. Only an actual blocked playback attempt reveals the small **Enable sound** button. Music and narration reuse two persistent audio elements across tracks and slides. Blocked playback is not retried automatically; tap the button to resume. A reload or Safari interruption may require another tap.
+
+## Code formatting
+
+Run `npm run format` to format application JavaScript, the build script, HTML, and application styles. `npm run format:check` checks formatting without modifying files. Both commands use the shared Prettier configuration and leave bundled vendor libraries and generated production assets alone. Startup-screen styles live in `webroot/css/startup.css`.
 
 ## Original project and credits
 

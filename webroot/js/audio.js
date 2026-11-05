@@ -1,163 +1,227 @@
+const SILENT_AUDIO =
+  'data:audio/wav;base64,UklGRnQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
+
 class AudioManager {
-    constructor() {
-        this.playlist = []
-        this.$players = $('<div id="players">')
-        this.isMobile = false
-        this.vocallocal = {
-            cc: [],
-            lf: [`/vocallocal/DAYPART_DEFAULT1.wav`],
-            bl: []
-        }
+  constructor() {
+    this.playlist = [];
+    this.$players = $('<div id="players">');
+    // Honor the browser's actual playback decision, including existing permission.
+    this.blocked = false;
+    this.channels = {
+      music: this.createChannel('music'),
+      voice: this.createChannel('voice'),
+    };
+    this.soundButton = document.createElement('button');
+    this.soundButton.id = 'enable-sound';
+    this.soundButton.type = 'button';
+    this.soundButton.textContent = 'Enable sound';
+    this.soundButton.hidden = true;
+    this.soundButton.addEventListener('click', () => this.enableSound());
+    document.body.append(this.soundButton);
+    this.vocallocal = {
+      cc: [],
+      lf: [`/vocallocal/DAYPART_DEFAULT1.wav`],
+      bl: [],
+    };
 
-        $('body').append(this.$players)
+    $('body').append(this.$players);
 
-        if (audioSettings.enableMusic) {
-            this.buildPlaylist();
-            if (audioSettings.randomStart) { this.shuffleStart() }
-            if (audioSettings.shuffle) { shuffle(this.playlist) }
-            //this.startPlaying(this.playlist, true);
-        }
+    if (audioSettings.enableMusic) {
+      this.buildPlaylist();
+      if (audioSettings.randomStart) {
+        this.shuffleStart();
+      }
+      if (audioSettings.shuffle) {
+        shuffle(this.playlist);
+      }
+      //this.startPlaying(this.playlist, true);
     }
+  }
 
-    shuffleStart() {
-        var firstHalf = this.playlist
-        var secondHalf = firstHalf.splice(Math.floor(Math.random() * firstHalf.length))
-        this.playlist = [...secondHalf, ...firstHalf]
+  shuffleStart() {
+    var firstHalf = this.playlist;
+    var secondHalf = firstHalf.splice(Math.floor(Math.random() * firstHalf.length));
+    this.playlist = [...secondHalf, ...firstHalf];
+  }
+
+  playCC(vl) {
+    if (vl) {
+      this.startPlaying(this.vocallocal.cc, false);
+    } else {
+      this.startPlaying(['narrations/Your_current_conditions.mp3'], false);
     }
+  }
 
-    playCC(vl) {
-        if(vl){
-            this.startPlaying(this.vocallocal.cc, false);
-        } else{
-            this.startPlaying(['narrations/Your_current_conditions.mp3'], false)
-        }
+  playRadar() {
+    this.startPlaying(
+      [`/vocallocal/doppler/LRADAR_DEFAULT${Math.floor(Math.random()) + 1}.wav`],
+      false,
+    );
+  }
+
+  playBulletin() {
+    this.startPlaying(this.vocallocal.bl, false);
+  }
+
+  playLF() {
+    this.startPlaying(this.vocallocal.lf, false);
+  }
+
+  playEF() {
+    this.startPlaying(
+      [`/vocallocal/weekahead/7DAY_DEFAULT${Math.floor(Math.random() * 3) + 1}.wav`],
+      false,
+    );
+  }
+
+  playSevere(name) {
+    if (name == 'Flash Flood Warning') {
+      this.startPlaying(
+        ['/vocallocal/beep.wav', '/vocallocal/FFLOOD_DEFAULT.wav', '/vocallocal/beep.wav'],
+        false,
+      );
+    } else if (name == 'Tornado Warning') {
+      this.startPlaying(
+        ['/vocallocal/beep.wav', '/vocallocal/TORNADO_DEFAULT.wav', '/vocallocal/beep.wav'],
+        false,
+      );
+    } else if (name == 'Severe Thunderstorm Warning') {
+      this.startPlaying(
+        ['/vocallocal/beep.wav', '/vocallocal/TSTORM_DEFAULT.wav', '/vocallocal/beep.wav'],
+        false,
+      );
+    } else {
+      this.startPlaying(
+        [
+          '/vocallocal/beep.wav',
+          '/vocallocal/beep.wav',
+          '/vocallocal/beep.wav',
+          '/vocallocal/beep.wav',
+        ],
+        false,
+      );
     }
+  }
 
-    playRadar(){
-        this.startPlaying([`/vocallocal/doppler/LRADAR_DEFAULT${Math.floor(Math.random()) + 1}.wav`], false)
+  buildPlaylist() {
+    this.playlist = [];
+    var musicPath = 'music/';
+    for (var i = 0; i < audioSettings.order.length; i++) {
+      this.playlist.push(`${musicPath}${audioSettings.order[i]}.mp3`);
     }
+  }
 
-    playBulletin(){
-        this.startPlaying(this.vocallocal.bl, false)
+  createChannel(type) {
+    const audio = document.createElement('audio');
+    audio.preload = 'auto';
+    audio.setAttribute('playsinline', '');
+    this.$players.append(audio);
+    const channel = { audio, type, tracks: [], index: 0, active: false, loop: false, failures: 0 };
+    audio.addEventListener('ended', () => {
+      if (!channel.active) return;
+      channel.failures = 0;
+      this.advance(channel);
+    });
+    audio.addEventListener('error', () => {
+      if (!channel.active) return;
+      console.warn(`[Boone audio] ${type} track unavailable`);
+      channel.failures++;
+      this.advance(channel);
+    });
+    audio.addEventListener('loadedmetadata', () => {
+      if (!channel.active || type !== 'music') return;
+      const offset = Math.abs(Number(audioSettings.offset) || 0);
+      if (Number.isFinite(audio.duration) && offset < audio.duration) audio.currentTime = offset;
+    });
+    return channel;
+  }
+
+  startPlaying(tracks, loop) {
+    const type = loop ? 'music' : 'voice';
+    if ((loop && !audioSettings.enableMusic) || (!loop && !audioSettings.narrations)) return;
+    const channel = this.channels[type];
+    if (!Array.isArray(tracks) || !tracks.length) return;
+    if (channel.active && (!this.blocked || type === 'music')) return;
+    channel.tracks = [...tracks];
+    channel.index = 0;
+    channel.loop = loop;
+    channel.failures = 0;
+    channel.active = true;
+    this.loadTrack(channel);
+  }
+
+  loadTrack(channel) {
+    channel.audio.src = channel.tracks[channel.index];
+    channel.audio.volume = channel.type === 'music' && !this.channels.voice.active ? 0.8 : 0.3;
+    if (channel.type === 'voice') {
+      channel.audio.volume = 1;
+      this.channels.music.audio.volume = 0.3;
     }
-
-    playLF() {
-        this.startPlaying(this.vocallocal.lf, false)
+    if (this.blocked) {
+      this.soundButton.hidden = false;
+      return;
     }
+    this.playChannel(channel);
+  }
 
-    playEF() {
-        this.startPlaying([`/vocallocal/weekahead/7DAY_DEFAULT${Math.floor(Math.random() * 3)+1}.wav`], false)
+  playChannel(channel) {
+    try {
+      return Promise.resolve(channel.audio.play()).catch((error) => this.handlePlayError(error));
+    } catch (error) {
+      this.handlePlayError(error);
+      return Promise.resolve();
     }
+  }
 
-    playSevere(name){
-        if(name == "Flash Flood Warning"){
-            this.startPlaying(['/vocallocal/beep.wav', '/vocallocal/FFLOOD_DEFAULT.wav', '/vocallocal/beep.wav'], false);
-        } else if(name == "Tornado Warning"){
-            this.startPlaying(['/vocallocal/beep.wav', '/vocallocal/TORNADO_DEFAULT.wav', '/vocallocal/beep.wav'], false);
-        } else if(name == "Severe Thunderstorm Warning"){
-            this.startPlaying(['/vocallocal/beep.wav', '/vocallocal/TSTORM_DEFAULT.wav', '/vocallocal/beep.wav'], false);
-        } else {
-            this.startPlaying(['/vocallocal/beep.wav','/vocallocal/beep.wav','/vocallocal/beep.wav','/vocallocal/beep.wav'], false);
-        }
+  handlePlayError(error) {
+    if (error.name === 'AbortError') return;
+    if (error.name === 'NotAllowedError') {
+      if (!this.blocked) console.info('[Boone audio] Waiting for a tap to enable sound');
+      this.blocked = true;
+      this.soundButton.hidden = false;
+      // Subsequent slides queue normally, without retrying blocked playback.
+      for (const channel of Object.values(this.channels)) channel.audio.pause();
+    } else {
+      console.warn('[Boone audio] Playback unavailable');
     }
+  }
 
-    buildPlaylist() {
-        this.playlist = []
-        var musicPath = 'music/';
-        for(var i = 0; i < audioSettings.order.length; i++){
-            this.playlist.push(`${musicPath}${audioSettings.order[i]}.mp3`);
-        }
+  enableSound() {
+    this.blocked = false;
+    this.soundButton.hidden = true;
+    // Both persistent elements must be played directly inside the tap handler.
+    for (const channel of Object.values(this.channels)) {
+      if (channel.active) {
+        this.playChannel(channel);
+      } else {
+        channel.audio.src = SILENT_AUDIO;
+        this.playChannel(channel).then(() => {
+          if (!channel.active) channel.audio.pause();
+        });
+      }
     }
+  }
 
-    startPlaying(arr, loop) {
-        var audioType = loop ? 'music' : 'voice'
-        if (this.$players.find(`.${audioType}`).length > 0) return;
-
-        var current = -1
-        const len = arr.length;
-
-        //functions built in with startPlaying
-        const initPlayer = (id, audioType) => {
-            var $div = $(`<div id="${id}" class="jplayer ${audioType}"></div>`);
-            $div.jPlayer({
-                swfPath: `${document.baseURI}jplayer`,
-                preload: 'auto',
-                ended: function() {
-                    if(audioType === "voice"){
-                        setTimeout(() => {
-                            playNext();
-                        }, 50);
-                    } else {
-                        playNext()
-                    }
-                }
-            });
-            this.$players.append($div);
-            return $div;
-        }
-        var $player = initPlayer('p1', audioType)
-        var $preloader = initPlayer('p2', audioType)
-
-        const playNext = () => {
-            current = getNextIndex();
-
-            if (getNextIndex() === null) {
-                $preloader.off($.jPlayer.event.ended).on($.jPlayer.event.ended, () => {
-                    this.$players.find('.music').jPlayer('volume', 0.8);
-                    $player.remove();
-                    $preloader.remove();
-                });
-                switchAudio();
-            } else {
-                switchAudio();
-                preloadTrack(arr[getNextIndex()]);
-            }
-        };
-
-        const preloadTrack = (trackName) => {
-            try {
-                $preloader.jPlayer('setMedia', { mp3: trackName }).jPlayer('play', audioType == 'music' ? Math.abs(audioSettings.offset) : 0).jPlayer('stop');
-            } catch (e) {
-                setTimeout(() => preloadTrack(trackName), 500);
-            }
-        };
-
-        const getNextIndex = () => {
-            const nextIndex = current + 1;
-            if (nextIndex < len) { return nextIndex; }
-            else { return (loop ? 0 : null) }
-        };
-
-        const switchAudio = () => {
-            var tempAudio = $player;
-            var tempAudio2 = $preloader;
-            $player = null, $preloader = null;
-            $player = tempAudio2;
-            $preloader = tempAudio;
-            $player.jPlayer('play', audioType == 'music' ? Math.abs(audioSettings.offset) : 0);
-
-            // $(document).one('mousedown', () => {
-            //     if (!this.isMobile) {
-            //         $player.jPlayer('play', audioType == 'music' ? Math.abs(audioSettings.offset) : 0);
-            //         this.isMobile = true;
-            //     }
-            // });
-
-        };
-
-        //initalizing players
-        if (audioType != 'music') {
-            this.$players.find('.music').jPlayer('volume', 0.3);
-        }
-
-        this.playCallback = {}
-        $preloader.jPlayer('setMedia', { mp3: arr[0] });
-        playNext();
+  advance(channel) {
+    channel.index++;
+    if (
+      channel.failures >= channel.tracks.length ||
+      (!channel.loop && channel.index >= channel.tracks.length)
+    ) {
+      channel.active = false;
+      channel.audio.pause();
+      if (channel.type === 'voice') this.channels.music.audio.volume = 0.8;
+      return;
     }
+    channel.index %= channel.tracks.length;
+    this.loadTrack(channel);
+  }
 
-    stopPlaying() {
-        this.$players.find('.music').jPlayer('volume', 0);
-    }
+  stopPlaying() {
+    const channel = this.channels.music;
+    channel.audio.pause();
+    channel.active = false;
+  }
 }
 
 var audioPlayer = new AudioManager();

@@ -12,11 +12,11 @@ async function build() {
   if (output !== path.resolve(root, 'dist') || path.dirname(output) !== root) {
     throw new Error('Build output must stay inside the project');
   }
-  await fs.rm(output, {recursive: true, force: true});
-  const stats = {files: 0, minified: 0, originalBytes: 0, minifiedBytes: 0};
+  await fs.rm(output, { recursive: true, force: true });
+  const stats = { files: 0, minified: 0, originalBytes: 0, minifiedBytes: 0 };
   async function copyDirectory(from, to) {
-    await fs.mkdir(to, {recursive: true});
-    for (const entry of await fs.readdir(from, {withFileTypes: true})) {
+    await fs.mkdir(to, { recursive: true });
+    for (const entry of await fs.readdir(from, { withFileTypes: true })) {
       // Private files and development source maps never enter the public build.
       if (entry.name.startsWith('.') || entry.name.endsWith('.map')) continue;
       const input = path.join(from, entry.name);
@@ -35,7 +35,7 @@ async function build() {
             minifyIdentifiers: true,
             legalComments: 'eof',
             sourcefile: path.relative(source, input),
-            sourcemap: false
+            sourcemap: false,
           });
           await fs.writeFile(destination, result.code);
           stats.minified++;
@@ -57,10 +57,14 @@ async function build() {
   await fs.writeFile(path.join(output, 'build-info.json'), JSON.stringify(stats, null, 2) + '\n');
   const saved = ((1 - stats.minifiedBytes / stats.originalBytes) * 100).toFixed(1);
   console.info(`[Build] ${stats.files} files ready in dist/webroot`);
-  console.info(`[Build] Minified ${stats.minified} JavaScript/CSS files: ${stats.originalBytes} → ${stats.minifiedBytes} bytes (${saved}% smaller)`);
+  console.info(
+    `[Build] Minified ${stats.minified} JavaScript/CSS files: ${stats.originalBytes} → ${stats.minifiedBytes} bytes (${saved}% smaller)`,
+  );
 }
 
 build().catch(() => {
-  console.error('[Build] Failed to prepare production assets; inspect source files and output permissions');
+  console.error(
+    '[Build] Failed to prepare production assets; inspect source files and output permissions',
+  );
   process.exitCode = 1;
 });

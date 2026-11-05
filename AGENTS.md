@@ -13,3 +13,6 @@
 - Provide a production build that minifies JavaScript and CSS, preserves shared browser globals, and serves through Express without including private configuration in public artifacts.
 - Keep radar maps hidden during startup/preloading; reveal them only when a radar slide begins.
 - Keep the fork changelog focused on major features relative to upstream; omit intermediate fixes, logging tweaks, and development-process details.
+- Use the shared Prettier configuration for application code. Keep bundled vendor libraries and generated assets out of formatting changes.
+- Reuse persistent music/narration audio elements. Honor existing browser playback permission on all devices; show the sound button only after an actual NotAllowedError. Never force a sound prompt based on device type or repeatedly retry blocked autoplay.
+- Keep the production update command sequential: fast-forward pull from origin/main, install build dependencies, build, then start production; stop on failures.

@@ -4,7 +4,10 @@
   "scripts": {
     "start": "node app.js",
     "build": "node scripts/build.js",
-    "start:prod": "node app.js --production"
+    "start:prod": "node app.js --production",
+    "format": "prettier --write app.js \"scripts/**/*.js\" \"webroot/js/*.js\" webroot/index.html webroot/main.css .prettierrc.json package.json webroot/css/startup.css",
+    "format:check": "prettier --check app.js \"scripts/**/*.js\" \"webroot/js/*.js\" webroot/index.html webroot/main.css .prettierrc.json package.json webroot/css/startup.css",
+    "deploy:prod": "node scripts/production.js"
   },
   "dependencies": {
     "date-fns": "^2.23.0",
@@ -21,7 +24,8 @@
     "gulp-autoprefixer": "^6.1.0",
     "gulp-clean-css": "^4.2.0",
     "gulp-sass": "^5.0.0",
-    "gulp-sourcemaps": "^2.6.5"
+    "gulp-sourcemaps": "^2.6.5",
+    "prettier": "^3.9.10"
   },
   "engines": {
     "node": ">=22.0.0"
